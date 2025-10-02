@@ -10,3 +10,4 @@ refactoring_plan.md
 __pycache__/
 *.py[cod]
 *.pyo
+.DS_Store

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loka_light"
+version = "0.1.0"
+description = "Compact multipolar toolkit"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Your Name" }]
+license = { text = "MIT" }
+dependencies = [
+  "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "mypy>=1.10",
+  "ruff>=0.5",
+]
+
+[tool.setuptools]
+packages = [
+  "loka_light",
+  "loka_light.applications",
+  "loka_light.cognition",
+  "loka_light.core",
+  "loka_light.devices",
+  "loka_light.physics",
+  "loka_light.simulation",
+]
+
+[tool.setuptools.package-dir]
+loka_light = "."
+
+

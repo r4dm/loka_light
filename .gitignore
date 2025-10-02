@@ -1,0 +1,12 @@
+loka_light.egg-info/
+.venv/
+.env
+refactoring_plan.md
+*.so
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.pyo

@@ -1,9 +1,9 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-  - family-names: "loka_light"
-    given-names: ""
-    orcid: ""
+  - family-names: "Radaev"
+    given-names: "Maxim"
+    email: "radaevm@gmail.com"
 title: "loka_light: Compact multipolar toolkit for n-polar information systems"
 version: 0.1.0
 date-released: 2024-12-19

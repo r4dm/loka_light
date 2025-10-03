@@ -78,9 +78,9 @@ example, set `{"outdir": "runs/custom_scan", "true_polarity": 8}` when calling
 If you use this software in your research, please cite:
 
 ```bibtex
-@software{loka_light2024,
+@software{radaev2024loka,
   title={loka_light: Compact multipolar toolkit for n-polar information systems},
-  author={loka_light},
+  author={Radaev, Maxim},
   year={2024},
   url={https://github.com/r4dm/loka_light},
   license={CC-BY-NC-4.0}

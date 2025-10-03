@@ -73,6 +73,20 @@ Pass keyword arguments through the dictionary literal to tweak behaviour; for
 example, set `{"outdir": "runs/custom_scan", "true_polarity": 8}` when calling
 `object_polarity_scan`.
 
+## Citation
+
+If you use this software in your research, please cite:
+
+```bibtex
+@software{loka_light2024,
+  title={loka_light: Compact multipolar toolkit for n-polar information systems},
+  author={loka_light},
+  year={2024},
+  url={https://github.com/r4dm/loka_light},
+  license={CC-BY-NC-4.0}
+}
+```
+
 ## Direct Device Experiments
 
 Sample notebook-free loop for the devices:

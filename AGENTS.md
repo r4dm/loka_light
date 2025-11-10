@@ -12,12 +12,16 @@ This is a conceptual orientation for AI agents (not an API manual).
 - MultipolarOscillator shapes multi‑conjugate waves
 - PolarCoder maps integers 0…N−1 to basis distributions
 - Wave carries amplitudes + light metadata
+- Sigma tools: `physics/sigma.py` → `p_perp`, `n_stage` (Σ→0), `nx_stage` (multi‑section)
+- SigmaGuard device: `devices/sigma_guard.py` wraps N/NX for cascade O2/O3
+- T‑composition: `physics/composition.py: compose_two_triads_to_c6()` (two triads → 6P)
 
 ## Operational model (how to think)
 1) Pick N and output mode
 2) Transmitter(+MultipolarOscillator) encodes messages → wave
-3) Focus on amplitude structure across polarities, not channels
-4) Receiver checks compatibility and demodulates
+3) Apply SigmaGuard (N or NX) where Σ→0 is required in the cascade (O2)
+4) Focus on amplitude structure across polarities, not channels
+5) Receiver checks compatibility and demodulates
 
 ## Minimal assumptions
 - Messages in [0, N−1] (strict). No modulo unless explicit.
@@ -27,10 +31,11 @@ This is a conceptual orientation for AI agents (not an API manual).
 
 ## Heuristics (for agents)
 - Reason over amplitude vectors, compare shapes
+- Use `n_stage`/`nx_stage` to purify sums (Σ) before decoding
 - For ordered exchange, send one message per transmission
 
 ## Limits (by design)
 - Minimal phenomenology; not a full EM simulator
 - Default decode is argmax; advanced decoding is out‑of‑scope
-
+- Theory lives in docstrings; no external PDFs are needed here
 

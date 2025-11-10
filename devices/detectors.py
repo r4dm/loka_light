@@ -1,5 +1,9 @@
 """Detection instruments—microphones, polarity scanners, receivers—that probe resonance and demodulate
-multipolar signals for the active mind."""
+multipolar signals for the active mind.
+
+Note: in cascades, O2 ("Sigma guard") typically applies Σ→0 purification via
+`devices.sigma_guard.SigmaGuard` using a single N-stage or a multi-section NX.
+"""
 
 from __future__ import annotations
 
@@ -106,7 +110,11 @@ class PolarityDetector:
 
 
 class MultipolarReceiver(MindLinkedDevice):
-    """Receive multipolar waves and demodulate them into message indices."""
+    """Receive multipolar waves and demodulate them into message indices.
+
+    Cascade hint: O2 applies a SigmaGuard (N or NX) so the sum over poles is
+    removed (Σ→0) before decoding.
+    """
 
     def __init__(
         self,

@@ -1,5 +1,9 @@
 """Transmitter, antenna, and keying utilities that encode messages into multipolar waves and retune
-polarity/frequency on demand."""
+polarity/frequency on demand.
+
+Note: in typical cascades, the O2 stage acts as a "Sigma guard" (Σ→0) using
+`devices.sigma_guard.SigmaGuard` to apply N or NX before further processing.
+"""
 
 from __future__ import annotations
 

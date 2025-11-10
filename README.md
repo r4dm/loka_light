@@ -8,12 +8,6 @@ source .venv/bin/activate
 pip install -e .[dev]
 ```
 
-## Key Building Blocks
-
-- Sigma tools: `loka_light/physics/sigma.py` — `p_perp`, `n_stage` (Σ→0), `nx_stage` (multi‑section), `sigma_norm`.
-- Sigma guard device: `loka_light/devices/sigma_guard.py` — wraps N/NX for O2/O3 in cascades.
-- T‑composition: `loka_light/physics/composition.py: compose_two_triads_to_c6()` — two triads → 6P superposition.
-
 ## Running Demo Scenarios with `python`
 
 Each scenario is a plain function living under

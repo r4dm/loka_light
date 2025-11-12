@@ -1,8 +1,12 @@
 """Transmitter, antenna, and keying utilities that encode messages into multipolar waves and retune
 polarity/frequency on demand.
 
-Note: in typical cascades, the O2 stage acts as a "Sigma guard" (Σ→0) using
-`devices.sigma_guard.SigmaGuard` to apply N or NX before further processing.
+Pseudomultipolar vs volumetric:
+- Antenna/oscillator/receiver form the volumetric (field) chain — radiation and
+  capture in a medium with selectivity by number of poles (and optionally frequency).
+- SigmaGuard (N/NX) is a pseudomultipolar (network) stage placed at O2/O3 to
+  project onto the Σ≈0 subspace before decoding. Do not conflate these roles:
+  M/N ≠ radiation; antenna ≠ Σ‑projection.
 """
 
 from __future__ import annotations

@@ -23,6 +23,11 @@ This is a conceptual orientation for AI agents (not an API manual).
 4) Focus on amplitude structure across polarities, not channels
 5) Receiver checks compatibility and demodulates
 
+## Pseudomultipolar vs Volumetric (quick map)
+- Pseudomultipolar (network, M/N): Σ‑projection utilities live in `physics/sigma.py` (`p_perp`, `n_stage`, `nx_stage`) and the device wrapper `devices/sigma_guard.SigmaGuard`. Use them between O2/O3 to remove the common component and stabilize the differential signal across N and N₁…Nₓ. This is not a 3D field model.
+- Volumetric (field): formation/radiation/reception in a medium via `devices.sources.MultipolarOscillator`, `devices.communication.MultipolarAntenna`, and `devices.detectors.MultipolarReceiver`. Selectivity is by number of poles and (optionally) frequency.
+- Heuristic: for conversion/normalization and Σ control → SigmaGuard (M/N). For propagation/antennas/medium coupling → volumetric chain.
+
 ## Minimal assumptions
 - Messages in [0, N−1] (strict). No modulo unless explicit.
 - Fixed N/frequency unless a dynamic key is used.
@@ -38,4 +43,3 @@ This is a conceptual orientation for AI agents (not an API manual).
 - Minimal phenomenology; not a full EM simulator
 - Default decode is argmax; advanced decoding is out‑of‑scope
 - Theory lives in docstrings; no external PDFs are needed here
-

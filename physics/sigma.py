@@ -10,6 +10,11 @@ concepts that many research flows depend on:
 All docstrings are kept concise so models can infer the intended usage without
 pulling external theory. See also `devices/sigma_guard.py` for an instrument
 wrapper that fits the transmitter/receiver cascade.
+
+Note on scope (pseudomultipolar vs volumetric): this module implements the
+network (pseudomultipolar) Σ→0 operations used in M/N cascades at nodes O2/O3.
+It does not model volumetric (3D) field formation/radiation in a medium. For
+volumetric chains, use the oscillator/antenna/receiver devices.
 """
 
 from __future__ import annotations
@@ -98,4 +103,3 @@ def nx_stage(mv: MultipolarValue, sections: int | Sequence[float]) -> List[Multi
         cur = n_stage(cur)
         out.append(cur)
     return out
-

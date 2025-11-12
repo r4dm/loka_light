@@ -33,6 +33,11 @@ secure_transmission({})
 PY
 ```
 
+Note on regimes: the secure chain uses the volumetric path (oscillator → TX/RX
+antennas → receiver) for propagation in a medium, while Σ‑projection (M/N) is a
+separate pseudomultipolar stage (see `devices/sigma_guard.py`) applied at O2/O3
+to remove the common component before decoding.
+
 ### 3. Electrolyser Stage Update
 
 ```bash

@@ -24,6 +24,9 @@ from ..devices import (
 )
 from ..physics.multipolar_wave import MultiConjugateFunction
 from ..cognition.models import NPoleMind
+from ..devices.sigma_guard import SigmaGuard
+from ..devices.pseudomultipolar import BipolarSource, PseudoBlockM
+from ..physics.sigma import sigma_norm
 
 
 def _outdir(params: Dict[str, Any], default: str) -> Path:
@@ -59,6 +62,7 @@ def secure_transmission(params: Dict[str, Any]) -> None:
     rx_antennas: Dict[int, MultipolarAntenna] = {}
     messages = list(params.get("messages", [1, 0, 2, 3, 1, 3]))
     good: List[int] = []
+    guard = SigmaGuard(sections=2)
     for msg in messages:
         wave = tx.transmit([msg])
         n = wave.n_conjugates
@@ -67,7 +71,15 @@ def secure_transmission(params: Dict[str, Any]) -> None:
         emitted = tx_ant.emit(wave)
         received = rx_ant.receive(emitted)
         if rx.receive(received):
-            good.extend(rx.demodulate())
+            # Apply SigmaGuard (NX) before decoding to enforce Σ→0
+            mv = received.to_multipolar_value(rx.loka)
+            purified = guard.apply_nx(mv, sections=guard.sections)[-1]
+            purified_wave = MultiConjugateFunction(
+                purified,
+                n_conjugates=received.n_conjugates,
+                metadata=received.metadata,
+            )
+            good.extend(rx.demodulate(purified_wave))
     outdir = _outdir(params, "runs/secure_transmission")
     (outdir / "result.json").write_text(json.dumps({"sent": messages, "received": good}, indent=2))
 
@@ -137,3 +149,56 @@ __all__ = [
     "property_transfer_chain",
     "structuring_field",
 ]
+
+
+def pseudo_mnx_chain(params: Dict[str, Any]) -> None:
+    """Demonstrate M (summation of 2-pole sources) → N/NX → RX with |Σ| trace.
+
+    Steps
+    - Create k bipolar sources and map them into an N-pole space via block M.
+    - Apply SigmaGuard NX and record sigma_norm after each section.
+    - Build a wave from the final value and demodulate with a rank-N receiver.
+    - Save the |Σ| trace and decoded index for inspection.
+    """
+
+    n = int(params.get("n", 6))
+    k = int(params.get("k", 3))
+    sections = int(params.get("sections", 3))
+    bits = [int(x) & 1 for x in params.get("bits", [1, 0, 1])][:k]
+    while len(bits) < k:
+        bits.append(0)
+
+    sources = [BipolarSource(f"S{i}") for i in range(k)]
+    mapping = [i % n for i in range(k)]
+    block_m = PseudoBlockM(n, mapping, name="BlockM")
+    mv_mixed = block_m.mix(sources, bits)
+
+    guard = SigmaGuard(sections=sections)
+    sigma_before = sigma_norm(mv_mixed)
+    nx_values = guard.apply_nx(mv_mixed, sections=sections)
+    sigma_trace = [sigma_norm(mv) for mv in nx_values]
+
+    # Build a minimal RX chain and demodulate
+    tx_osc = MultipolarOscillator([_default_inductor()], [_default_capacitor()], polarity=n)
+    rx_osc = MultipolarOscillator([_default_inductor()], [_default_capacitor()], polarity=n)
+    rx = MultipolarReceiver(rx_osc, polarity=n)
+    final_mv = nx_values[-1]
+    wave = MultiConjugateFunction(final_mv, n_conjugates=n)
+    rx.receive(wave)
+    decoded = rx.demodulate(wave)
+
+    outdir = _outdir(params, "runs/pseudo_mnx_chain")
+    (outdir / "trace.json").write_text(
+        json.dumps(
+            {
+                "n": n,
+                "k": k,
+                "bits": bits,
+                "sigma_before": sigma_before,
+                "sigma_trace": sigma_trace,
+                "decoded": decoded,
+                "block_m_passport": block_m.describe_structure(),
+            },
+            indent=2,
+        )
+    )

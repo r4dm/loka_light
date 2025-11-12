@@ -12,9 +12,11 @@ This is a conceptual orientation for AI agents (not an API manual).
 - MultipolarOscillator shapes multi‑conjugate waves
 - PolarCoder maps integers 0…N−1 to basis distributions
 - Wave carries amplitudes + light metadata
+- PseudoBlockM (devices/pseudomultipolar.py) sums multiple 2‑pole sources into C_n at O1 (relative ground)
 - Sigma tools: `physics/sigma.py` → `p_perp`, `n_stage` (Σ→0), `nx_stage` (multi‑section)
 - SigmaGuard device: `devices/sigma_guard.py` wraps N/NX for cascade O2/O3
 - T‑composition: `physics/composition.py: compose_two_triads_to_c6()` (two triads → 6P)
+- WaveMetadata carries `frequency_hz` for RX compatibility checks
 
 ## Operational model (how to think)
 1) Pick N and output mode
@@ -24,8 +26,9 @@ This is a conceptual orientation for AI agents (not an API manual).
 5) Receiver checks compatibility and demodulates
 
 ## Pseudomultipolar vs Volumetric (quick map)
-- Pseudomultipolar (network, M/N): Σ‑projection utilities live in `physics/sigma.py` (`p_perp`, `n_stage`, `nx_stage`) and the device wrapper `devices/sigma_guard.SigmaGuard`. Use them between O2/O3 to remove the common component and stabilize the differential signal across N and N₁…Nₓ. This is not a 3D field model.
+- Pseudomultipolar (network, M/N): `devices.pseudomultipolar.PseudoBlockM` (O1 summation, relative ground) and Σ‑projection utilities in `physics/sigma.py` (`p_perp`, `n_stage`, `nx_stage`) via `devices.sigma_guard.SigmaGuard`. Use them at O2/O3 to remove the common component and stabilize the differential signal across N and N₁…Nₓ. This is not a 3D field model.
 - Volumetric (field): formation/radiation/reception in a medium via `devices.sources.MultipolarOscillator`, `devices.communication.MultipolarAntenna`, and `devices.detectors.MultipolarReceiver`. Selectivity is by number of poles and (optionally) frequency.
+- Extras: `MultipolarOscillator` exposes a `geometry_profile` label; antennas support `loss_db` attenuation for simple channel modeling.
 - Heuristic: for conversion/normalization and Σ control → SigmaGuard (M/N). For propagation/antennas/medium coupling → volumetric chain.
 
 ## Minimal assumptions
@@ -38,6 +41,7 @@ This is a conceptual orientation for AI agents (not an API manual).
 - Reason over amplitude vectors, compare shapes
 - Use `n_stage`/`nx_stage` to purify sums (Σ) before decoding
 - For ordered exchange, send one message per transmission
+- For pseudomultipolar demos, prefer `pseudo_mnx_chain` (M→NX→RX) to validate Σ trace
 
 ## Limits (by design)
 - Minimal phenomenology; not a full EM simulator

@@ -1,0 +1,51 @@
+{
+  "n": 6,
+  "k": 3,
+  "bits": [
+    1,
+    0,
+    1
+  ],
+  "sigma_trace": [
+    5.551115123125783e-17,
+    1.1102230246251565e-16,
+    2.7755575615628914e-17,
+    8.326672684688674e-17
+  ],
+  "decoded": [
+    1
+  ],
+  "block_m_passport": {
+    "device": "BlockM",
+    "cascade": [
+      {
+        "role": "summation",
+        "loka": "C6",
+        "polarities": 6,
+        "description": "Summation of multiple 2-pole sources into N-pole network node (O1)",
+        "operations": [
+          "bipolar\u2192N mapping",
+          "linear sum"
+        ],
+        "notes": [
+          "Acts as block M (pseudomultipolar)"
+        ]
+      }
+    ],
+    "nodes": {
+      "O1": "relative ground (summation node)"
+    },
+    "materials": [
+      "inductors/capacitors (abstract)"
+    ],
+    "scenarios": [],
+    "mind_interfaces": [],
+    "ground_profiles": [
+      "relative_O1"
+    ],
+    "notes": [
+      "Use SigmaGuard at O2/O3 for \u03a3\u21920 before decoding"
+    ],
+    "metrics": {}
+  }
+}

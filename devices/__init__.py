@@ -14,6 +14,7 @@ from .components import (
 from .media import MediaPhantom, MultipolarSpeaker, PhantomReproducer
 from .coding import PolarCoder
 from .passport import CascadeStage, StructuralPassport
+from .pseudomultipolar import BipolarSource, PseudoBlockM
 
 __all__ = [
     "MultipolarOscillator",
@@ -35,4 +36,6 @@ __all__ = [
     "PolarCoder",
     "CascadeStage",
     "StructuralPassport",
+    "BipolarSource",
+    "PseudoBlockM",
 ]

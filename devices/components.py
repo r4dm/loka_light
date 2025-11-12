@@ -28,7 +28,7 @@ class MultiPlateCapacitor(StackedCapacitor):
 
 @dataclass
 class NBranchInductor:
-    """Parallel inductor bundle used by Lensky oscillator."""
+    """Parallel inductor bundle used by Multipolar oscillator."""
 
     name: str
     nodes: Tuple[str, str]

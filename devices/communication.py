@@ -60,7 +60,7 @@ class MultipolarTransmitter(MindLinkedDevice):
                 role="formation",
                 loka=f"C{n}",
                 polarities=n,
-                description="Lensky oscillator shapes the outgoing wave.",
+                description="Multipolar oscillator shapes the outgoing wave.",
             ),
         ]
         return StructuralPassport(
@@ -118,21 +118,34 @@ class MultipolarTransmitter(MindLinkedDevice):
 
 
 class MultipolarAntenna:
-    """Simple gain element used on both transmission and reception side."""
+    """Simple gain element with optional attenuation (loss) for tx/rx chains.
 
-    def __init__(self, *, polarity: int, role: str = "tx", gain: float = 1.0) -> None:
+    Parameters
+    - polarity: number of poles the antenna is tuned to.
+    - role: informational label ("tx" or "rx").
+    - gain: linear gain multiplier (applied after losses).
+    - loss_db: additional attenuation in dB (applied symmetrically on emit/receive).
+    """
+
+    def __init__(self, *, polarity: int, role: str = "tx", gain: float = 1.0, loss_db: float = 0.0) -> None:
         self.polarity = int(polarity)
         self.role = role
         self.gain = float(gain)
+        self.loss_db = float(loss_db)
+
+    def _scale(self) -> float:
+        # Convert dB loss to linear and apply gain
+        loss_lin = 10.0 ** (-self.loss_db / 20.0) if self.loss_db != 0.0 else 1.0
+        return self.gain * loss_lin
 
     def emit(self, wave: MultiConjugateFunction) -> MultiConjugateFunction:
         scaled = wave.copy()
-        scaled.amplitudes = scaled.amplitudes * self.gain
+        scaled.amplitudes = scaled.amplitudes * self._scale()
         return scaled
 
     def receive(self, wave: MultiConjugateFunction) -> MultiConjugateFunction:
         scaled = wave.copy()
-        scaled.amplitudes = scaled.amplitudes * self.gain
+        scaled.amplitudes = scaled.amplitudes * self._scale()
         return scaled
 
 

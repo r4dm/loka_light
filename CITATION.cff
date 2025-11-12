@@ -5,8 +5,8 @@ authors:
     given-names: "Maxim"
     email: "radaevm@gmail.com"
 title: "loka_light: Compact multipolar toolkit for n-polar information systems"
-version: 0.1.0
-date-released: 2025-10-02
+version: 1.0.0
+date-released: 2025-11-12
 url: "https://github.com/r4dm/loka_light"
 license: "CC-BY-NC-4.0"
 keywords:

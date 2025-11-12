@@ -1,4 +1,4 @@
-"""Source-side devices such as Lensky oscillators and electrolytic cells that construct the formation
+"""Source-side devices such as Multipolar oscillators and electrolytic cells that construct the formation
 and release phases of a multipolar cascade."""
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ class MultipolarOscillator(MindLinkedDevice):
         mind: AbstractMind | None = None,
         loka: Loka | str | None = None,
         polarity: int | None = None,
+        geometry_profile: str = "sphere",
     ) -> None:
         if not inductors or not capacitors:
             raise ValueError("oscillator requires at least one inductor and one capacitor")
@@ -40,6 +41,7 @@ class MultipolarOscillator(MindLinkedDevice):
         self.capacitors = list(capacitors)
         self._n_polarities = self.rank
         self._target_freq: float | None = None
+        self.geometry_profile = str(geometry_profile)
         self.structural_passport = self._build_passport()
         self._sync_passport()
 
@@ -91,6 +93,9 @@ class MultipolarOscillator(MindLinkedDevice):
                 sigma_residual=mv.collapse(recursive=True),
             ),
         )
+        # Attach frequency for compatibility checks on the receiver side
+        if wave.metadata is not None:
+            setattr(wave.metadata, "frequency_hz", self.working_frequency)
         return wave
 
     # ------------------------------------------------------------------
@@ -113,11 +118,13 @@ class MultipolarOscillator(MindLinkedDevice):
                 notes=("Prepared wave is ready for transmission.",),
             ),
         ]
+        notes = ("Prepared wave is ready for transmission.", f"geometry_profile={self.geometry_profile}")
         return StructuralPassport(
             device_name=self.name,
             cascade=cascade,
             nodes={"O1": "energy intake", "O2": "Sigma guard", "O3": "output"},
             materials=("inductors", "capacitors"),
+            notes=notes,
         )
 
     def _sync_passport(self) -> None:
@@ -183,4 +190,4 @@ class ElectrochemicalCell:
         return self.structural_passport.to_dict()
 
 
-__all__ = ["LenskyOscillator", "ElectrochemicalCell"]
+__all__ = ["MultipolarOscillator", "ElectrochemicalCell"]

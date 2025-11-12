@@ -7,6 +7,7 @@ from .scenarios import (
     polarization_field,
     property_transfer_chain,
     structuring_field,
+    pseudo_mnx_chain,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "polarization_field",
     "property_transfer_chain",
     "structuring_field",
+    "pseudo_mnx_chain",
 ]

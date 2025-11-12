@@ -161,8 +161,9 @@ class MultipolarReceiver(MindLinkedDevice):
             device_name=self.name,
             cascade=cascade,
             nodes={"O1": "antenna", "O2": "Sigma guard", "O3": "decoder"},
-            materials=("Lensky oscillator", "digital decoder"),
+            materials=("Multipolar oscillator", "digital decoder"),
             notes=tuple(notes),
+            ground_profiles=("relative_O2", "relative_O3"),
         )
 
     def _sync_passport(self) -> None:
@@ -185,16 +186,13 @@ class MultipolarReceiver(MindLinkedDevice):
         poles_ok = abs(wave.n_conjugates - self.rank) <= tol_poles
         if not poles_ok:
             return False
+        # Frequency check: only compare against explicit frequency metadata if requested
         if tol_freq is None or wave.metadata is None:
             return poles_ok
-        freq = self.oscillator.working_frequency
         freq_meta = getattr(wave.metadata, "frequency_hz", None)
-        if freq_meta is not None:
-            return abs(freq_meta - freq) <= tol_freq
-        recorded = getattr(wave.metadata, "sigma_norm", None)
-        if recorded is None:
+        if freq_meta is None:
             return poles_ok
-        return abs(recorded - freq) <= tol_freq
+        return abs(freq_meta - self.oscillator.working_frequency) <= tol_freq
 
     def receive(self, wave: MultiConjugateFunction) -> bool:
         if self.key is not None:

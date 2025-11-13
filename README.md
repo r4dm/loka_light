@@ -86,6 +86,23 @@ PY
 Writes `runs/pseudo_mnx_chain/trace.json` with the |Σ| values after each NX section
 and the decoded index after Σ purification.
 
+### 8. Pseudo‑Quantum H→Phase→H→Measure
+
+```bash
+python - <<'PY'
+from loka_light.applications.scenarios import pseudo_quantum_hadamard_phase
+
+pseudo_quantum_hadamard_phase({
+    "shots": 256,
+    "phase_angle": 1.0471975512,  # ~pi/3
+    # "outdir": "runs/pseudo_quantum_hadamard",  # optional
+})
+PY
+```
+
+Writes `summary.json` under the chosen `outdir` with the measurement histogram,
+Σ trace by stage and a snapshot of the final state.
+
 ## Cascade Map (M → N/NX → RX)
 
 ```
@@ -136,5 +153,29 @@ receiver = MultipolarReceiver(osc_rx, mind=mind)
 wave = transmitter.transmit([1, 2, 3])
 receiver.receive(wave)
 print(receiver.demodulate())
+PY
+```
+
+## Pseudo‑Quantum CPU Simulator (multipolar)
+
+The CPU implementation of the pseudo‑quantum simulator lives under
+`loka_light.simulation.multipolar_pseudo_quantum` and works directly with
+`MultiConjugateFunction` states.
+
+Quick inline demo:
+
+```bash
+python - <<'PY'
+import numpy as np
+
+from loka_light.simulation import multipolar_pseudo_quantum as mpq
+
+# Minimal H → phase → H → measure scenario
+summary = mpq.hadamard_phase_measure_demo(shots=256, seed=42)
+print("counts:", summary["counts"])
+
+# Inspect correctness vs analytic reference
+report = mpq.single_qubit_correctness_demo(phase_angle=np.pi/3, shots=1024, seed=123)
+print("variation_distance:", report.variation_distance)
 PY
 ```

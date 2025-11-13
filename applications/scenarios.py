@@ -148,6 +148,8 @@ __all__ = [
     "polarization_field",
     "property_transfer_chain",
     "structuring_field",
+    "pseudo_mnx_chain",
+    "pseudo_quantum_hadamard_phase",
 ]
 
 
@@ -202,3 +204,32 @@ def pseudo_mnx_chain(params: Dict[str, Any]) -> None:
             indent=2,
         )
     )
+
+
+def pseudo_quantum_hadamard_phase(params: Dict[str, Any]) -> None:
+    """Run the pseudo‑quantum H→phase→H→measure demo and persist artefacts.
+
+    Parameters in ``params`` (all optional):
+    - ``shots``: number of runs to collect the histogram;
+    - ``phase_angle``: phase applied to the second pole (radians);
+    - ``seed``: RNG seed for reproducibility;
+    - ``outdir``: output directory (default ``runs/pseudo_quantum_hadamard``).
+
+    The function writes ``summary.json`` with counts, Σ trace and a snapshot of
+    the final state into the chosen directory.
+    """
+
+    from ..simulation import multipolar_pseudo_quantum as mpq
+
+    shots = int(params.get("shots", 256))
+    phase_angle = float(params.get("phase_angle", np.pi / 3.0))
+    seed = params.get("seed")
+    outdir = _outdir(params, "runs/pseudo_quantum_hadamard")
+
+    summary = mpq.hadamard_phase_measure_demo(
+        shots=shots,
+        phase_angle=phase_angle,
+        seed=seed,
+    )
+
+    (outdir / "summary.json").write_text(json.dumps(summary, indent=2))

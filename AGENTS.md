@@ -31,6 +31,12 @@ This is a conceptual orientation for AI agents (not an API manual).
 - Extras: `MultipolarOscillator` exposes a `geometry_profile` label; antennas support `loss_db` attenuation for simple channel modeling.
 - Heuristic: for conversion/normalization and Σ control → SigmaGuard (M/N). For propagation/antennas/medium coupling → volumetric chain.
 
+### Pseudo‑quantum (CPU) layer
+
+- Location: `simulation.multipolar_pseudo_quantum` (CPU/NumPy only).
+- State: reuses `physics.multipolar_wave.MultiConjugateFunction`.
+- Scope: pseudo‑quantum M/N gates, circuits, Σ‑aware metrics and demos; no volumetric geometry.
+
 ## Minimal assumptions
 - Messages in [0, N−1] (strict). No modulo unless explicit.
 - Fixed N/frequency unless a dynamic key is used.

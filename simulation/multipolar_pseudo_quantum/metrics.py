@@ -166,7 +166,7 @@ def _random_unitary_like(dim: int) -> np.ndarray:
     imag = rng.normal(size=(dim, dim))
     mat = real + 1j * imag
     q, r = np.linalg.qr(mat)
-    # нормируем диагональ, чтобы получить унитароподобную матрицу
+    # normalize the diagonal to obtain a unitary-like matrix
     d = np.diag(r)
     phases = d / np.abs(d)
     return (q * phases).astype(np.complex128)

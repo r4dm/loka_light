@@ -39,10 +39,10 @@ def hadamard_phase_measure_demo(
 
     rng = np.random.default_rng(seed)
 
-    # Базовое состояние |0>
+    # Base state |0>
     psi0 = MultiConjugateFunction(np.array([1.0 + 0.0j, 0.0 + 0.0j]), n_conjugates=2)
 
-    # Аналог матрицы Адамара
+    # Hadamard matrix analog
     H = (1.0 / np.sqrt(2.0)) * np.array(
         [[1.0, 1.0], [1.0, -1.0]],
         dtype=np.complex128,
@@ -51,7 +51,7 @@ def hadamard_phase_measure_demo(
     circuit = Circuit(
         stages=[
             GateSpec(kind="unitary", params={"matrix": H}),
-            # фазовый сдвиг только второго полюса
+            # Phase shift for the second pole only
             GateSpec(kind="phase", params={"angle": np.array([0.0, phase_angle], dtype=float)}),
             GateSpec(kind="unitary", params={"matrix": H}),
             GateSpec(kind="measure", params={}),

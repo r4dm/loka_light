@@ -7,7 +7,7 @@ name = "loka_light"
 version = "1.0.0"
 description = "Compact multipolar toolkit"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [{ name = "Maxim Radaev", email = "radaevm@gmail.com" }]
 license = { text = "CC BY-NC 4.0" }
 dependencies = [

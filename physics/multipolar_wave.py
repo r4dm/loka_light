@@ -51,6 +51,17 @@ class MultiConjugateFunction:
         self.metadata = metadata
 
     # ------------------------------------------------------------------
+    def probability_tensor(self) -> np.ndarray:
+        """Return the full density matrix ρ = |ψ⟩⟨ψ|.
+
+        The tensor keeps interference information between all poles and
+        complements :meth:`probability_density`, which returns only the
+        scalar Σ|ψ|² scaled by k/2.
+        """
+
+        return np.outer(self.amplitudes, np.conj(self.amplitudes))
+
+    # ------------------------------------------------------------------
     def copy(self) -> "MultiConjugateFunction":
         """Return a duplicate wave, keeping metadata and n-conjugate count."""
 

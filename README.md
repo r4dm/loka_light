@@ -1,5 +1,56 @@
 # Loka Light
 
+## Conceptual intro
+
+- Multipolarity: signals are distributions over **N poles** instead of binary (+/−); `LokaCn` and `MultipolarValue` keep the algebra and Σ‑balance.
+- Pseudomultipolar cascades: Σ is controlled by M/N/NX stages (`physics.sigma`, `devices.sigma_guard.SigmaGuard`) so that a common component is removed before decoding.
+- Volumetric path (lightweight): `MultipolarOscillator` → TX/RX antennas → receiver form a simple medium/communication chain; `geometry_profile` is a label, not a full 3D field model.
+- Pseudo‑quantum layer: CPU/NumPy states via `MultiConjugateFunction` with both scalar `probability_density()` and tensor `probability_tensor()` for simple “quantum‑like” experiments.
+
+### Minimal code examples
+
+**1. Basic 4‑pole loka and Σ‑aware value**
+
+```python
+from loka_light.core.algebras import LokaCn
+from loka_light.core.value import MultipolarValue
+
+loka = LokaCn(4, "add", "C4_add", ["A", "B", "C", "D"])
+mv = MultipolarValue(loka, {"A": 1.0, "C": -1.0})
+
+print("mv:", mv)
+print("collapsed:", mv.collapse())  # complex number with Σ structure
+```
+
+**2. SigmaGuard as a one‑line Σ→0 purification**
+
+```python
+from loka_light.core.algebras import LokaCn
+from loka_light.core.value import MultipolarValue
+from loka_light.devices.sigma_guard import SigmaGuard
+
+loka = LokaCn(3, "add", "C3_add", ["P0", "P1", "P2"])
+mv = MultipolarValue(loka, {"P0": 1.0, "P1": 0.5, "P2": -0.2})
+
+guard = SigmaGuard()
+mv_clean = guard.apply(mv)
+
+print("residual before:", guard.residual(mv))
+print("residual after:", guard.residual(mv_clean))
+```
+
+**3. Simple pseudo‑quantum state with tensor metric**
+
+```python
+import numpy as np
+from loka_light.physics.multipolar_wave import MultiConjugateFunction
+
+psi = MultiConjugateFunction([1.0 + 0.0j, 1.0j], n_conjugates=2)
+
+print("probability_density:", psi.probability_density())
+print("probability_tensor:\n", psi.probability_tensor())
+```
+
 ## Environment
 
 ```bash
@@ -179,3 +230,7 @@ report = mpq.single_qubit_correctness_demo(phase_angle=np.pi/3, shots=1024, seed
 print("variation_distance:", report.variation_distance)
 PY
 ```
+
+## TODO
+
+- Package and publish `loka_light` to PyPI as a small SDK for N‑pole / Σ‑aware cascades and pseudo‑quantum experiments.

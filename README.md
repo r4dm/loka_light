@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17734820.svg)](https://doi.org/10.5281/zenodo.17734820)
+
 # Loka Light
 
 ## Conceptual intro
@@ -51,7 +53,13 @@ print("probability_density:", psi.probability_density())
 print("probability_tensor:\n", psi.probability_tensor())
 ```
 
-## Environment
+## Installation
+
+```bash
+pip install loka-light
+```
+
+## Development
 
 ```bash
 python -m venv .venv
@@ -231,6 +239,3 @@ print("variation_distance:", report.variation_distance)
 PY
 ```
 
-## TODO
-
-- Package and publish `loka_light` to PyPI as a small SDK for N‑pole / Σ‑aware cascades and pseudo‑quantum experiments.

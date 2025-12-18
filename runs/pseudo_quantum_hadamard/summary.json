@@ -2,8 +2,8 @@
   "shots": 256,
   "phase_angle": 1.0471975512,
   "counts": {
-    "0": 197,
-    "1": 59
+    "0": 193,
+    "1": 63
   },
   "example_sigma_trace": {
     "sigma_by_stage": [

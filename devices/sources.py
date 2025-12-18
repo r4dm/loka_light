@@ -83,19 +83,17 @@ class MultipolarOscillator(MindLinkedDevice):
         phases = np.exp(1j * 2.0 * np.pi * np.arange(self._n_polarities) / self._n_polarities)
         coeffs = {polarities[i]: phases[i] for i in range(self._n_polarities)}
         mv = MultipolarValue(loka, coeffs)
+        metadata = WaveMetadata.from_amplitudes(
+            phases,
+            loka_name=loka.name,
+            polarity_names=[p.name for p in loka.polarities],
+            frequency_hz=self.working_frequency,
+        )
         wave = MultiConjugateFunction(
             mv,
             n_conjugates=self._n_polarities,
-            metadata=WaveMetadata(
-                loka_name=loka.name,
-                polarity_names=[p.name for p in loka.polarities],
-                sigma_norm=float(np.linalg.norm(list(coeffs.values()))),
-                sigma_residual=mv.collapse(recursive=True),
-            ),
+            metadata=metadata,
         )
-        # Attach frequency for compatibility checks on the receiver side
-        if wave.metadata is not None:
-            setattr(wave.metadata, "frequency_hz", self.working_frequency)
         return wave
 
     # ------------------------------------------------------------------

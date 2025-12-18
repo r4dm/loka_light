@@ -3,7 +3,7 @@ between raw arrays and MultipolarValue projections."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable, List, Sequence
 
 import numpy as np
@@ -14,12 +14,39 @@ from ..core.polarity import Polarity
 
 @dataclass
 class WaveMetadata:
-    """Diagnostic bundle describing the loka and Sigma metrics of a wave."""
+    """Diagnostic bundle describing the loka and Σ-metrics of a wave.
+
+    Conventions
+    - Σ is defined as the sum of complex amplitudes over all poles.
+    - ``sigma_residual`` stores Σ itself (complex).
+    - ``sigma_norm`` stores |Σ| (magnitude), useful as a residual for Σ→0 checks.
+    """
 
     loka_name: str
     polarity_names: List[str]
     sigma_norm: float
     sigma_residual: complex
+    frequency_hz: float | None = None
+
+    @classmethod
+    def from_amplitudes(
+        cls,
+        amplitudes: Sequence[complex] | np.ndarray,
+        *,
+        loka_name: str,
+        polarity_names: Sequence[str],
+        frequency_hz: float | None = None,
+    ) -> "WaveMetadata":
+        vec = np.asarray(amplitudes, dtype=np.complex128)
+        sigma = complex(vec.sum())
+        freq = None if frequency_hz is None else float(frequency_hz)
+        return cls(
+            loka_name=str(loka_name),
+            polarity_names=[str(name) for name in polarity_names],
+            sigma_norm=float(abs(sigma)),
+            sigma_residual=sigma,
+            frequency_hz=freq,
+        )
 
 
 class MultiConjugateFunction:
@@ -43,6 +70,12 @@ class MultiConjugateFunction:
             self._basis = list(amplitudes.loka.polarities)
             seq = [amplitudes.coefficients.get(p, 0.0) for p in self._basis]
             self.amplitudes = np.asarray(seq, dtype=np.complex128)
+            if metadata is None:
+                metadata = WaveMetadata.from_amplitudes(
+                    self.amplitudes,
+                    loka_name=amplitudes.loka.name,
+                    polarity_names=[p.name for p in amplitudes.loka.polarities],
+                )
         else:
             arr = np.asarray(list(amplitudes), dtype=np.complex128)
             if arr.ndim != 1:
@@ -55,8 +88,8 @@ class MultiConjugateFunction:
         """Return the full density matrix ρ = |ψ⟩⟨ψ|.
 
         The tensor keeps interference information between all poles and
-        complements :meth:`probability_density`, which returns only the
-        scalar Σ|ψ|² scaled by k/2.
+        complements :meth:`probability_density`, which returns the scalar
+        generalised modulus power Σ|ψ|^k (k = n_conjugates).
         """
 
         return np.outer(self.amplitudes, np.conj(self.amplitudes))
@@ -65,28 +98,42 @@ class MultiConjugateFunction:
     def copy(self) -> "MultiConjugateFunction":
         """Return a duplicate wave, keeping metadata and n-conjugate count."""
 
+        meta = None if self.metadata is None else replace(self.metadata)
         return MultiConjugateFunction(
             self.amplitudes.copy(),
             n_conjugates=self.n_conjugates,
-            metadata=self.metadata,
+            metadata=meta,
         )
 
     def normalize(self) -> None:
-        """Scale amplitudes so that Σ|ψ|²=1 and refresh the backing MV."""
+        """Scale amplitudes so that Σ|ψ|^k = 1 (k = n_conjugates).
 
-        norm = np.linalg.norm(self.amplitudes)
-        if norm == 0:
+        For k=2 this reduces to standard L2 normalisation. For k>2 it matches
+        the multi-conjugate modulus rule used across the theory docs.
+        """
+
+        k = int(self.n_conjugates)
+        norm = self.probability_density()
+        if norm == 0.0:
             raise ValueError("cannot normalize zero amplitudes")
-        self.amplitudes = self.amplitudes / norm
+        scale = norm ** (1.0 / k)
+        self.amplitudes = self.amplitudes / scale
         if self._mv is not None and self._basis is not None:
             coeffs = {p: c for p, c in zip(self._basis, self.amplitudes)}
             self._mv = MultipolarValue(self._mv.loka, coeffs)
+        if self.metadata is not None:
+            self.metadata = WaveMetadata.from_amplitudes(
+                self.amplitudes,
+                loka_name=self.metadata.loka_name,
+                polarity_names=self.metadata.polarity_names,
+                frequency_hz=self.metadata.frequency_hz,
+            )
 
     def probability_density(self) -> float:
-        """Return Σ|ψ|² scaled by k/2 to match n-conjugate energy rules."""
+        """Return the generalised modulus power Σ|ψ|^k (k = n_conjugates)."""
 
-        base = float(np.sum(np.abs(self.amplitudes) ** 2))
-        return base * (self.n_conjugates / 2)
+        k = int(self.n_conjugates)
+        return float(np.sum(np.abs(self.amplitudes) ** k))
 
     def collapse(self, *, recursive: bool = True) -> complex:
         """Collapse the wave to a number using the underlying MultipolarValue."""

@@ -6,7 +6,8 @@ The module stays strictly in the pseudo‑multipolar cascade domain:
 - gates are linear operations on amplitudes (phases, unitary‑like matrices);
 - the M‑stage builds controlled superpositions of several states;
 - the N‑stage applies a projection/removal with Σ monitoring (Σ→0);
-- measurement interprets ``|ψ|²`` over poles as a probability distribution.
+- measurement interprets ``|ψ|^k`` over poles as a probability distribution,
+  where ``k = state.n_conjugates``.
 
 Σ is defined here as the sum of complex amplitudes over all poles; before and
 after N‑operations ``sigma_value`` and ``sigma_residual`` expose Σ traces for
@@ -210,7 +211,8 @@ def measure_polarity(state: MultiConjugateFunction, *, rng: np.random.Generator 
         rng = np.random.default_rng()
 
     amplitudes = state.amplitudes
-    probs = np.abs(amplitudes) ** 2
+    power = int(state.n_conjugates)
+    probs = np.abs(amplitudes) ** power
     norm = float(probs.sum())
     if norm == 0.0:
         raise ValueError("Cannot measure a state with zero norm")

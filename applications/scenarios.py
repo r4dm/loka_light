@@ -22,7 +22,7 @@ from ..devices import (
     MultipolarMicrophone,
     ElectrochemicalCell,
 )
-from ..physics.multipolar_wave import MultiConjugateFunction
+from ..physics.multipolar_wave import MultiConjugateFunction, WaveMetadata
 from ..cognition.models import NPoleMind
 from ..devices.sigma_guard import SigmaGuard
 from ..devices.pseudomultipolar import BipolarSource, PseudoBlockM
@@ -74,10 +74,19 @@ def secure_transmission(params: Dict[str, Any]) -> None:
             # Apply SigmaGuard (NX) before decoding to enforce Σ→0
             mv = received.to_multipolar_value(rx.loka)
             purified = guard.apply_nx(mv, sections=guard.sections)[-1]
+            purified_vec = np.asarray(
+                [purified.coefficients.get(p, 0.0) for p in purified.loka.polarities],
+                dtype=np.complex128,
+            )
             purified_wave = MultiConjugateFunction(
                 purified,
                 n_conjugates=received.n_conjugates,
-                metadata=received.metadata,
+                metadata=WaveMetadata.from_amplitudes(
+                    purified_vec,
+                    loka_name=purified.loka.name,
+                    polarity_names=[p.name for p in purified.loka.polarities],
+                    frequency_hz=(received.metadata.frequency_hz if received.metadata else None),
+                ),
             )
             good.extend(rx.demodulate(purified_wave))
     outdir = _outdir(params, "runs/secure_transmission")

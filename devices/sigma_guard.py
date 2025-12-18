@@ -33,7 +33,11 @@ class SigmaGuard:
         return n_stage(mv)
 
     def apply_nx(self, mv: MultipolarValue, sections: int | Sequence[float] | None = None) -> List[MultipolarValue]:
-        """Run NX with the given section count or taps; default uses `self.sections`."""
+        """Run NX with the given section count or taps; default uses `self.sections`.
+
+        When ``sections`` is a sequence, it is treated as per-section tap strengths
+        (0 < tap ≤ 1) controlling how strongly the mean component is removed.
+        """
 
         return nx_stage(mv, sections if sections is not None else self.sections)
 
@@ -45,4 +49,3 @@ class SigmaGuard:
 
 
 __all__ = ["SigmaGuard"]
-

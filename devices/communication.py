@@ -33,6 +33,7 @@ class MultipolarTransmitter(MindLinkedDevice):
         oscillator: MultipolarOscillator,
         *,
         key: DynamicKey | None = None,
+        message_gain: float = 1.0,
         mind: AbstractMind | None = None,
         loka: Loka | str | None = None,
         polarity: int | None = None,
@@ -41,9 +42,11 @@ class MultipolarTransmitter(MindLinkedDevice):
         super().__init__(mind=mind, loka=loka, default_rank=desired_rank)
         self.oscillator = oscillator
         self.key = key
+        self.message_gain = float(message_gain)
         if self.oscillator.get_polarity() != self.rank:
             self.oscillator.set_polarity(self.rank)
-        self._coder = PolarCoder(self.rank, loka=self.loka)
+        # The oscillator defines the formation loka; keep the coder aligned to it.
+        self._coder = PolarCoder(self.rank, loka=self.oscillator.loka)
         self.structural_passport = self._build_passport()
         self._sync_passport()
 
@@ -83,32 +86,34 @@ class MultipolarTransmitter(MindLinkedDevice):
             self.oscillator.set_polarity(n_pol)
             self.oscillator.set_frequency(freq)
             self.update_rank(n_pol)
-            self._coder = PolarCoder(self.rank, loka=self.loka)
+            self._coder = PolarCoder(self.rank, loka=self.oscillator.loka)
             self.structural_passport.record_metric("configured_polarity", float(self.rank))
         encoded = self._coder.encode(list(messages), as_mv=True)
-        total = np.zeros(self.rank, dtype=np.complex128)
-        loka = None
+        message_vec = np.zeros(self.rank, dtype=np.complex128)
+        loka = self.oscillator.loka
         for mv in encoded:
             assert isinstance(mv, MultipolarValue)
-            loka = mv.loka
-            arr = np.array([mv.coefficients.get(p, 0.0) for p in mv.loka.polarities], dtype=np.complex128)
-            total += arr
-        if loka is None:
+            arr = np.array(
+                [mv.coefficients.get(p, 0.0) for p in mv.loka.polarities], dtype=np.complex128
+            )
+            message_vec += arr
+        if not encoded:
             raise ValueError("no messages provided")
-        coeffs = {polarity: total[i] for i, polarity in enumerate(loka.polarities)}
-        mv = MultipolarValue(loka, coeffs)
-        wave = MultiConjugateFunction(
-            mv,
-            n_conjugates=self.rank,
-            metadata=WaveMetadata(
-                loka_name=loka.name,
-                polarity_names=[p.name for p in loka.polarities],
-                sigma_norm=float(np.linalg.norm(total)),
-                sigma_residual=mv.collapse(),
-            ),
+        # Formation: oscillator produces the multipolar carrier (geometry + frequency).
+        carrier = self.oscillator.generate_wave()
+        if carrier.amplitudes.shape != message_vec.shape:
+            raise ValueError("carrier and message vectors must have the same dimension")
+
+        # Modulation: scale the formed carrier per pole using the message distribution.
+        # This keeps phase geometry intact while making the targeted pole(s) dominant.
+        out = carrier.amplitudes * (1.0 + (self.message_gain * message_vec))
+        metadata = WaveMetadata.from_amplitudes(
+            out,
+            loka_name=loka.name,
+            polarity_names=[p.name for p in loka.polarities],
+            frequency_hz=self.oscillator.working_frequency,
         )
-        if wave.metadata is not None:
-            setattr(wave.metadata, 'frequency_hz', self.oscillator.working_frequency)
+        wave = MultiConjugateFunction(out, n_conjugates=self.rank, metadata=metadata)
         self.structural_passport.record_metric("last_message_count", float(len(encoded)))
         return wave
 
@@ -141,11 +146,25 @@ class MultipolarAntenna:
     def emit(self, wave: MultiConjugateFunction) -> MultiConjugateFunction:
         scaled = wave.copy()
         scaled.amplitudes = scaled.amplitudes * self._scale()
+        if scaled.metadata is not None:
+            scaled.metadata = WaveMetadata.from_amplitudes(
+                scaled.amplitudes,
+                loka_name=scaled.metadata.loka_name,
+                polarity_names=scaled.metadata.polarity_names,
+                frequency_hz=scaled.metadata.frequency_hz,
+            )
         return scaled
 
     def receive(self, wave: MultiConjugateFunction) -> MultiConjugateFunction:
         scaled = wave.copy()
         scaled.amplitudes = scaled.amplitudes * self._scale()
+        if scaled.metadata is not None:
+            scaled.metadata = WaveMetadata.from_amplitudes(
+                scaled.amplitudes,
+                loka_name=scaled.metadata.loka_name,
+                polarity_names=scaled.metadata.polarity_names,
+                frequency_hz=scaled.metadata.frequency_hz,
+            )
         return scaled
 
 

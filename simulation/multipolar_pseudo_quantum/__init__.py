@@ -5,7 +5,7 @@ Thesis:
 - the state is stored as :class:`loka_light.physics.multipolar_wave.MultiConjugateFunction`;
 - gates are linear (almost unitary) operations on amplitudes;
 - M/N‑stages control Σ and implement pseudo‑multipolar removal;
-- measurement interprets ``|ψ|²`` as probabilities over polarities.
+- measurement interprets ``|ψ|^k`` (k = n_conjugates) as probabilities over polarities.
 
 Implementation in this package:
 

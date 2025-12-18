@@ -7,7 +7,7 @@
 - Multipolarity: signals are distributions over **N poles** instead of binary (+/−); `LokaCn` and `MultipolarValue` keep the algebra and Σ‑balance.
 - Pseudomultipolar cascades: Σ is controlled by M/N/NX stages (`physics.sigma`, `devices.sigma_guard.SigmaGuard`) so that a common component is removed before decoding.
 - Volumetric path (lightweight): `MultipolarOscillator` → TX/RX antennas → receiver form a simple medium/communication chain; `geometry_profile` is a label, not a full 3D field model.
-- Pseudo‑quantum layer: CPU/NumPy states via `MultiConjugateFunction` with both scalar `probability_density()` and tensor `probability_tensor()` for simple “quantum‑like” experiments.
+- Pseudo‑quantum layer: CPU/NumPy states via `MultiConjugateFunction` with scalar `probability_density()` (= Σ|ψ|^k, k=`n_conjugates`) and tensor `probability_tensor()` for simple “quantum‑like” experiments.
 
 ### Minimal code examples
 
@@ -238,4 +238,3 @@ report = mpq.single_qubit_correctness_demo(phase_angle=np.pi/3, shots=1024, seed
 print("variation_distance:", report.variation_distance)
 PY
 ```
-

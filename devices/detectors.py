@@ -189,7 +189,7 @@ class MultipolarReceiver(MindLinkedDevice):
         # Frequency check: only compare against explicit frequency metadata if requested
         if tol_freq is None or wave.metadata is None:
             return poles_ok
-        freq_meta = getattr(wave.metadata, "frequency_hz", None)
+        freq_meta = wave.metadata.frequency_hz
         if freq_meta is None:
             return poles_ok
         return abs(freq_meta - self.oscillator.working_frequency) <= tol_freq

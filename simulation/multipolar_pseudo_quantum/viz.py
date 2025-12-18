@@ -25,7 +25,8 @@ def state_summary(state: MultiConjugateFunction) -> Dict[str, Any]:
     """
 
     amplitudes = state.amplitudes
-    probs_raw = np.abs(amplitudes) ** 2
+    power = int(state.n_conjugates)
+    probs_raw = np.abs(amplitudes) ** power
     norm = float(probs_raw.sum())
     if norm > 0.0:
         probs = (probs_raw / norm).tolist()

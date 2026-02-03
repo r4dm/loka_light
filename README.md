@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17973087.svg)](https://doi.org/10.5281/zenodo.17973087)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17734819.svg)](https://doi.org/10.5281/zenodo.17734819)
 
 
 # Loka Light

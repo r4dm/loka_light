@@ -4,6 +4,10 @@ This module provides a single factory that builds a 6-pole space from two
 independent triads and wires them into one superpositional loka. The pairing
 convention is a/A, b/B, c/C so downstream code can treat each pair as
 conjugate/complimentary in device logic.
+
+Note: this is a *direct-sum style* wiring (no shared neutral between layers).
+For superposition spaces that require a common neutral, keep
+``require_shared_neutral=True`` when constructing :class:`SuperpositionalLoka`.
 """
 
 from __future__ import annotations
@@ -46,8 +50,8 @@ def compose_two_triads_to_c6(name: str = "T6") -> Tuple[SuperpositionalLoka, Lok
         polarities=list(c6.polarities),
         layers=(layer_left, layer_right),
         delegate_layer=layer_left,
+        require_shared_neutral=False,
         tattva="triadic_superposition",
         mind_modes=("triadic", "tetradic"),
     )
     return t6, c3_left, c3_right
-

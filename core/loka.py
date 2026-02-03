@@ -429,18 +429,36 @@ class Loka:
             raise ValueError("no numeric polarities to average")
         return sum(numeric) / len(numeric)
 
-    def sigma_balance(self) -> complex:
+    def basis_sum(self) -> complex:
+        """Return the sum of *basis numeric weights* for this loka.
+
+        This is the sum of the numeric projections stored on :class:`Polarity`
+        objects (e.g. roots of unity for ``LokaCn``). It is **not** the Σ used
+        in M/N cascades and `physics.sigma`, where Σ is defined as the sum of
+        *amplitudes/coefficients* of a concrete wave/value.
+        """
+
         total = complex(0)
         for p in self.polarities:
             if p.value is not None:
                 total += complex(p.value)
         return total
 
+    def sigma_balance(self) -> complex:
+        """Alias for :meth:`basis_sum` (kept for backward compatibility)."""
+
+        return self.basis_sum()
+
     # -- validation ---------------------------------------------------------
     def ensure_sigma_zero(self, tolerance: float = 1e-9) -> None:
-        sigma = self.sigma_balance()
-        if abs(sigma) > tolerance:
-            raise ValueError(f"Sigma balance {sigma} exceeds tolerance {tolerance}")
+        """Validate that :meth:`basis_sum` is ~0 within tolerance.
+
+        Note: for amplitude Σ checks (Σ→0 purification), use `physics.sigma`.
+        """
+
+        basis = self.basis_sum()
+        if abs(basis) > tolerance:
+            raise ValueError(f"Basis sum {basis} exceeds tolerance {tolerance}")
 
     # -- convenience wrappers -----------------------------------------------
     def is_invertible(self) -> bool:

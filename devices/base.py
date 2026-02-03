@@ -3,12 +3,11 @@ laws activated by the observer."""
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from ..core.algebras import LokaCn
 from ..core.loka import Loka
+from ..core.factory import create_loka, normalize_loka_name
 from ..cognition.base import AbstractMind
 
 
@@ -22,19 +21,6 @@ class MindLokaBinding:
     @property
     def rank(self) -> int:
         return len(self.loka.polarities)
-
-
-def _loka_from_name(name: str, *, n_hint: Optional[int] = None) -> Loka:
-    match = re.search(r"(\d+)", name)
-    n = int(match.group(1)) if match else None
-    if n_hint is not None:
-        n = n_hint
-    if n is None or n < 2:
-        raise ValueError(
-            "cannot infer loka rank from name; provide mind, loka instance, or numeric hint"
-        )
-    polarity_names = [f"P{i}" for i in range(n)]
-    return LokaCn(n=n, operation_type="add", loka_name=name, polarity_names=polarity_names)
 
 
 def bind_mind_loka(
@@ -62,12 +48,12 @@ def bind_mind_loka(
         return MindLokaBinding(mind=None, loka=loka)
 
     if isinstance(loka, str):
-        loka_obj = _loka_from_name(loka, n_hint=n_hint)
+        loka_obj = create_loka(loka, n_hint=n_hint)
         return MindLokaBinding(mind=None, loka=loka_obj)
 
     if n_hint is not None and n_hint >= 2:
         name = f"AnonC{n_hint}"
-        loka_obj = _loka_from_name(name, n_hint=n_hint)
+        loka_obj = create_loka(name, n_hint=n_hint)
         return MindLokaBinding(mind=None, loka=loka_obj)
 
     raise ValueError(
@@ -117,8 +103,8 @@ class MindLinkedDevice:
     def update_rank(self, n: int) -> None:
         if self._binding.mind is not None:
             raise ValueError("cannot change rank when device is bound to a mind")
-        name = self._binding.loka.name
-        self._binding = bind_mind_loka(loka=name, n_hint=n)
+        name = normalize_loka_name(self._binding.loka.name, n=int(n))
+        self._binding = bind_mind_loka(loka=name, n_hint=int(n))
 
 
 __all__ = ["MindLokaBinding", "bind_mind_loka", "MindLinkedDevice"]

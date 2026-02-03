@@ -232,7 +232,8 @@ def pseudo_quantum_hadamard_phase(params: Dict[str, Any]) -> None:
 
     shots = int(params.get("shots", 256))
     phase_angle = float(params.get("phase_angle", np.pi / 3.0))
-    seed = params.get("seed")
+    seed = params.get("seed", 123)
+    seed = None if seed is None else int(seed)
     outdir = _outdir(params, "runs/pseudo_quantum_hadamard")
 
     summary = mpq.hadamard_phase_measure_demo(

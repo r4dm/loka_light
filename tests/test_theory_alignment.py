@@ -71,3 +71,42 @@ def test_transmitter_modulates_oscillator_carrier() -> None:
     expected = carrier.amplitudes.copy()
     expected[2] = expected[2] * 2.0
     assert np.allclose(wave2.amplitudes, expected)
+
+
+def test_compose_two_triads_to_c6_is_constructible() -> None:
+    from loka_light.physics.composition import compose_two_triads_to_c6
+
+    t6, c3_left, c3_right = compose_two_triads_to_c6()
+    assert t6.rank == 6
+    assert [p.name for p in t6.polarities] == ["a", "b", "c", "A", "B", "C"]
+    assert c3_left.rank == 3
+    assert c3_right.rank == 3
+
+
+def test_rel_hepta_tpl3_matches_yantra7_pairs_and_triples() -> None:
+    from loka_light.core.factory import create_loka
+
+    loka = create_loka("RelHeptaTPL3")
+    beta = loka.neutral_element
+    assert beta is not None
+
+    A = loka.get_polarity_by_name("A")
+    B = loka.get_polarity_by_name("B")
+    C = loka.get_polarity_by_name("C")
+    D = loka.get_polarity_by_name("D")
+    E = loka.get_polarity_by_name("E")
+    F = loka.get_polarity_by_name("F")
+    assert all(p is not None for p in (A, B, C, D, E, F))
+
+    assert loka.multiply(A, F) == beta
+    assert loka.multiply(B, E) == beta
+    assert loka.multiply(C, D) == beta
+
+    assert loka.evaluate([A, B, D]) == beta
+    assert loka.evaluate([C, E, F]) == beta
+
+    assert loka.multiply(A, B) == C
+    assert loka.multiply(B, D) == F
+    assert loka.multiply(A, D) == E
+
+    assert loka.inverse(A) == F

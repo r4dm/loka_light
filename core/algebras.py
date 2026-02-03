@@ -55,7 +55,12 @@ class RelationSpec:
 
 
 class SuperpositionalLoka(Loka):
-    """Combine multiple lokas into a shared space while preserving Sigma balance."""
+    """Combine multiple lokas into a shared space via explicit layer mappings.
+
+    By default, the constructor enforces that all layers map their neutral
+    polarity to the same target polarity (shared unity). For direct-sum style
+    constructions, set ``require_shared_neutral=False``.
+    """
 
     def __init__(
         self,
@@ -64,6 +69,7 @@ class SuperpositionalLoka(Loka):
         *,
         layers: Sequence[SuperpositionLayer] | None = None,
         delegate_layer: str | SuperpositionLayer | None = None,
+        require_shared_neutral: bool = True,
         tattva: TattvaProfile | str | None = None,
         dharmas: Sequence[DharmaProfile | str] | None = None,
         mind_modes: Sequence[str] | None = None,
@@ -100,21 +106,22 @@ class SuperpositionalLoka(Loka):
 
         self._delegate_layer = self._resolve_layer(delegate_layer) if (delegate_layer or self.layers) else None
 
-        neutral_targets: List[str] = []
-        for layer in self.layers:
-            src_neutral = layer.source_loka.neutral_element
-            if src_neutral is None:
-                continue
-            target_name = layer.normalized_mapping().get(src_neutral.name)
-            if target_name is not None:
-                neutral_targets.append(target_name)
-        if neutral_targets:
-            if len({target for target in neutral_targets}) > 1:
-                raise ValueError("superposition layers must share a common neutral polarity")
-            candidate = self.get_polarity_by_name(neutral_targets[0])
-            if candidate is None:
-                raise ValueError("neutral polarity from layer was not found in the resulting loka")
-            self.neutral_element = candidate
+        if require_shared_neutral:
+            neutral_targets: List[str] = []
+            for layer in self.layers:
+                src_neutral = layer.source_loka.neutral_element
+                if src_neutral is None:
+                    continue
+                target_name = layer.normalized_mapping().get(src_neutral.name)
+                if target_name is not None:
+                    neutral_targets.append(target_name)
+            if neutral_targets:
+                if len({target for target in neutral_targets}) > 1:
+                    raise ValueError("superposition layers must share a common neutral polarity")
+                candidate = self.get_polarity_by_name(neutral_targets[0])
+                if candidate is None:
+                    raise ValueError("neutral polarity from layer was not found in the resulting loka")
+                self.neutral_element = candidate
 
     def _resolve_layer(self, layer: SuperpositionLayer | str | None) -> SuperpositionLayer | None:
         if layer is None:
@@ -253,6 +260,7 @@ class Harloka(SuperpositionalLoka):
         *,
         bundles: Sequence[HarBundle] | None = None,
         layers: Sequence[SuperpositionLayer] | None = None,
+        require_shared_neutral: bool = True,
         tattva: TattvaProfile | str | None = None,
         dharmas: Sequence[DharmaProfile | str] | None = None,
         mind_modes: Sequence[str] | None = None,
@@ -273,6 +281,7 @@ class Harloka(SuperpositionalLoka):
             name,
             polarities,
             layers=har_layers,
+            require_shared_neutral=require_shared_neutral,
             tattva=tattva or "relational_visibility",
             dharmas=dharmas,
             mind_modes=mind_modes,
@@ -376,19 +385,184 @@ class RelationalLoka(Loka):
 
     def inverse(self, polarity: Polarity) -> Polarity:
         p_checked, _ = self._check_operands(polarity, polarity)
-        result = self.evaluate([p_checked, p_checked])
-        if isinstance(result, Polarity) and (self.neutral_element is None or result == self.neutral_element):
+        if self.neutral_element is None:
+            raise RuntimeError("cannot compute inverse without a neutral element")
+        if p_checked == self.neutral_element:
             return p_checked
+
+        for candidate in self.polarities:
+            if candidate == self.neutral_element:
+                continue
+            result = self.evaluate([p_checked, candidate])
+            if isinstance(result, Polarity) and result == self.neutral_element:
+                return candidate
+        raise RuntimeError(f"inverse not defined for polarity '{p_checked.name}' in {self.name}")
+
+    def divide(self, numerator: Polarity, denominator: Polarity) -> Polarity:
+        return self.multiply(numerator, self.inverse(denominator))
+
+
+class GenericRelationalLoka(Loka):
+    """Relational loka driven by a finite rule table (yantra-like).
+
+    This class is intended for cases where interactions are defined by explicit
+    rules for pairs/triples/... of polarities and cannot (or should not) be
+    derived from a uniform ``C_n`` table.
+
+    Rule format
+    - Keys are either:
+      - ``tuple[str, ...]`` / ``list[str]``: a *multiset* (duplicates allowed), order ignored
+      - ``frozenset[str]``: a *set* (duplicates not representable), order ignored
+    - Values are either:
+      - ``str``: polarity name (including ``neutral_name``)
+      - ``tuple[str, ...]`` / ``list[str]``: returned as a joined ``"p*q*..."`` string
+        (useful for diagnostics; not accepted by :meth:`multiply`).
+
+    Notes
+    - The neutral polarity is created as the first polarity and stored in
+      :attr:`neutral_element`.
+    - :meth:`multiply` only supports rules that resolve to a single polarity.
+    """
+
+    def __init__(
+        self,
+        *,
+        loka_name: str,
+        neutral_name: str,
+        polarity_names: Sequence[str],
+        rules: Mapping[object, object],
+        tattva: TattvaProfile | str | None = None,
+        dharmas: Sequence[DharmaProfile | str] | None = None,
+        mind_modes: Sequence[str] | None = None,
+        intensity_modes: Sequence[str] | None = None,
+    ) -> None:
+        if not isinstance(loka_name, str) or not loka_name:
+            raise ValueError("loka_name must be a non-empty string")
+        if not isinstance(neutral_name, str) or not neutral_name:
+            raise ValueError("neutral_name must be a non-empty string")
+        if not polarity_names or not all(isinstance(n, str) and n for n in polarity_names):
+            raise ValueError("polarity_names must be a non-empty sequence of non-empty strings")
+        if not isinstance(rules, Mapping):
+            raise TypeError("rules must be a mapping")
+
+        self._neutral_name = neutral_name
+
+        neutral = Polarity(neutral_name)
+        pols = [neutral] + [Polarity(str(n)) for n in polarity_names]
+        super().__init__(
+            loka_name,
+            pols,
+            tattva=tattva or "relational_visibility",
+            dharmas=dharmas,
+            mind_modes=mind_modes,
+            intensity_modes=intensity_modes,
+        )
+        self.neutral_element = neutral
+        self._by_name = {p.name: p for p in self.polarities}
+
+        normalized: Dict[object, object] = {}
+        for key, value in rules.items():
+            if isinstance(key, tuple):
+                key_norm: object = tuple(sorted(str(x) for x in key))
+            elif isinstance(key, list):
+                key_norm = tuple(sorted(str(x) for x in key))
+            elif isinstance(key, frozenset):
+                key_norm = frozenset(str(x) for x in key)
+            else:
+                raise TypeError("rule keys must be tuple/list/frozenset of polarity names")
+            normalized[key_norm] = value
+        self._rules = normalized
+
+    def _resolve_result(self, spec: object) -> Polarity | str:
+        if isinstance(spec, str):
+            if spec == self._neutral_name:
+                assert self.neutral_element is not None
+                return self.neutral_element
+            pol = self._by_name.get(spec)
+            if pol is None:
+                raise ValueError(f"unknown polarity in rule result: {spec}")
+            return pol
+        if isinstance(spec, (tuple, list)):
+            names: List[str] = []
+            for item in spec:
+                if not isinstance(item, str) or item not in self._by_name:
+                    raise ValueError(f"invalid name in composite rule result: {item}")
+                names.append(item)
+            return "*".join(sorted(names))
+        raise TypeError("unsupported rule result type; expected str or list/tuple[str]")
+
+    def evaluate(self, polarities: List[Polarity]) -> Union[Polarity, str]:
+        if not polarities:
+            return "undefined relation (empty input)"
+
+        internal: List[Polarity] = []
+        for polarity in polarities:
+            pol_internal = self.get_polarity_by_name(polarity.name)
+            if pol_internal is None:
+                return "polarity does not belong to this loka"
+            if self.neutral_element is not None and pol_internal == self.neutral_element:
+                continue
+            internal.append(pol_internal)
+
+        if not internal:
+            return self.neutral_element or "undefined relation"
+
+        names = [p.name for p in internal]
+        key_multiset = tuple(sorted(names))
+        key_set = frozenset(names)
+        if key_multiset in self._rules:
+            return self._resolve_result(self._rules[key_multiset])
+        if key_set in self._rules:
+            return self._resolve_result(self._rules[key_set])
+        return "undefined relation"
+
+    def multiply(self, p1: Polarity, p2: Polarity) -> Polarity:
+        p1_checked, p2_checked = self._check_operands(p1, p2)
+        if self.neutral_element is not None:
+            if p1_checked == self.neutral_element:
+                return p2_checked
+            if p2_checked == self.neutral_element:
+                return p1_checked
+        result = self.evaluate([p1_checked, p2_checked])
         if isinstance(result, Polarity):
             return result
-        return p_checked
+        raise RuntimeError(f"undefined product {p1_checked.name}*{p2_checked.name} in {self.name}: {result}")
+
+    def inverse(self, polarity: Polarity) -> Polarity:
+        p_checked, _ = self._check_operands(polarity, polarity)
+        if self.neutral_element is None:
+            raise RuntimeError("cannot compute inverse without a neutral element")
+        if p_checked == self.neutral_element:
+            return p_checked
+
+        # Prefer explicit self-inverse declarations.
+        try:
+            res = self.evaluate([p_checked, p_checked])
+            if isinstance(res, Polarity) and res == self.neutral_element:
+                return p_checked
+        except Exception:
+            pass
+
+        for candidate in self.polarities:
+            if candidate == self.neutral_element:
+                continue
+            res = self.evaluate([p_checked, candidate])
+            if isinstance(res, Polarity) and res == self.neutral_element:
+                return candidate
+        raise RuntimeError(f"inverse not defined for polarity '{p_checked.name}' in {self.name}")
 
     def divide(self, numerator: Polarity, denominator: Polarity) -> Polarity:
         return self.multiply(numerator, self.inverse(denominator))
 
 
 class LokaCn(Loka):
-    """Cyclic loka C_n bound to theory-aligned tattva selection."""
+    """Cyclic loka C_n (roots-of-unity basis).
+
+    Implementation note: the underlying group law is the same cyclic
+    composition (index addition mod n). ``operation_type`` selects whether that
+    law is exposed via :meth:`add` (additive notation) or :meth:`multiply`
+    (multiplicative notation).
+    """
 
     def __init__(self, n: int, operation_type: str, loka_name: str, polarity_names: List[str]):
         if not isinstance(n, int) or n < 1:
@@ -571,6 +745,7 @@ __all__ = [
     "SuperpositionalLoka",
     "Harloka",
     "RelationalLoka",
+    "GenericRelationalLoka",
     "LokaCn",
     "LokaDPN",
 ]

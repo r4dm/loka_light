@@ -158,7 +158,10 @@ __all__ = [
     "property_transfer_chain",
     "structuring_field",
     "pseudo_mnx_chain",
+    "pseudomultipolar_timeseries_demo",
+    "pseudo_quantum_witness_pack",
     "pseudo_quantum_hadamard_phase",
+    "translation_gap_demo",
 ]
 
 
@@ -243,3 +246,174 @@ def pseudo_quantum_hadamard_phase(params: Dict[str, Any]) -> None:
     )
 
     (outdir / "summary.json").write_text(json.dumps(summary, indent=2))
+
+
+def pseudomultipolar_timeseries_demo(params: Dict[str, Any]) -> None:
+    """Run a time-series M→NX cascade and persist arrays + Σ/energy summaries.
+
+    Writes:
+    - `series.npz` with O1/O2/O3 signals and Σ/energy traces.
+    - `summary.json` with mean |Σ| (before and per NX section) and RX mismatch metrics.
+    """
+
+    from ..physics import pseudomultipolar_timeseries as pmts
+
+    n = int(params.get("n", 6))
+    steps = int(params.get("steps", 256))
+    seed = params.get("seed", 123)
+    seed = None if seed is None else int(seed)
+    carrier_cycles = float(params.get("carrier_cycles", 0.125))
+    noise_std = float(params.get("noise_std", 0.0))
+
+    taps: List[float]
+    if "taps" in params:
+        taps = [float(x) for x in params["taps"]]
+    else:
+        sections = int(params.get("sections", 3))
+        tap = float(params.get("tap", 0.5))
+        taps = pmts.default_profiles(sections=sections, tap=tap)
+
+    sources = pmts.generate_sources(
+        n,
+        steps=steps,
+        seed=seed,
+        carrier_cycles=carrier_cycles,
+        noise_std=noise_std,
+    )
+    result = pmts.run_cascade(sources, sections=taps)
+
+    rx_bad_energy = None
+    rx_bad_mean_sigma = None
+    if n >= 3:
+        bad = pmts.project_rank(result.o3, n - 1)
+        rx_bad_energy = float(np.mean(pmts.energy_trace(bad)))
+        rx_bad_mean_sigma = float(np.mean(pmts.sigma_trace(bad)))
+
+    outdir = _outdir(params, "runs/pseudomultipolar_timeseries")
+    np.savez(
+        outdir / "series.npz",
+        o1=result.o1,
+        o2=result.o2,
+        o3=result.o3,
+        sigma_o1=result.sigma_o1,
+        sigma_chain=np.stack(result.sigma_chain, axis=0),
+        energy_o1=result.energy_o1,
+        energy_o3=result.energy_o3,
+    )
+    (outdir / "summary.json").write_text(
+        json.dumps(
+            {
+                "n": n,
+                "steps": steps,
+                "taps": list(result.taps),
+                "seed": seed,
+                "mean_abs_sigma_o1": result.mean_sigma_o1,
+                "mean_abs_sigma_chain": result.mean_sigma_chain,
+                "sigma_monotone": result.is_sigma_monotone(),
+                "rx_good_energy": float(np.mean(result.energy_o3)),
+                "rx_bad_energy": rx_bad_energy,
+                "rx_bad_mean_abs_sigma": rx_bad_mean_sigma,
+            },
+            indent=2,
+        )
+    )
+
+
+def pseudo_quantum_witness_pack(params: Dict[str, Any]) -> None:
+    """Compute CHSH/CGLMP reference values + Σ-consistent noise telemetry."""
+
+    from .. import sigma_noise, witnesses
+
+    seed = params.get("seed", 123)
+    seed = None if seed is None else int(seed)
+    epsilon = float(params.get("epsilon", 0.2))
+    d_values = [int(x) for x in params.get("d_values", [2, 3, 4, 5])]
+    d_values = [d for d in d_values if d >= 2]
+    if not d_values:
+        d_values = [2, 3, 4, 5]
+
+    witness_table = {str(d): float(witnesses.cglmp_value(d)) for d in d_values}
+    chsh = float(witnesses.chsh_value())
+
+    dim = int(params.get("noise_dim", max(8, max(d_values) ** 2)))
+    rng_state = np.random.default_rng(seed)
+    psi = (rng_state.normal(size=dim) + 1j * rng_state.normal(size=dim)).astype(np.complex128)
+    norm = float(np.linalg.norm(psi))
+    if norm == 0.0:
+        psi = (np.ones(dim, dtype=np.complex128) + 0.0j) / np.sqrt(dim)
+    else:
+        psi = psi / norm
+    sigma_in = complex(psi.sum())
+
+    rng_consistent = np.random.default_rng(None if seed is None else seed + 1)
+    rng_generic = np.random.default_rng(None if seed is None else seed + 2)
+    u_sigma = sigma_noise.unitary_sigma_consistent(dim, rng=rng_consistent, epsilon=epsilon)
+    u_generic = sigma_noise.unitary_generic(dim, rng=rng_generic, epsilon=epsilon)
+    sigma_out_sigma = complex((u_sigma @ psi).sum())
+    sigma_out_generic = complex((u_generic @ psi).sum())
+
+    outdir = _outdir(params, "runs/pseudo_quantum_witness_pack")
+    (outdir / "summary.json").write_text(
+        json.dumps(
+            {
+                "seed": seed,
+                "epsilon": epsilon,
+                "witnesses": {
+                    "chsh_d2": chsh,
+                    "cglmp": witness_table,
+                },
+                "sigma_noise": {
+                    "dim": dim,
+                    "sigma_in": [float(sigma_in.real), float(sigma_in.imag)],
+                    "sigma_out_sigma_consistent": [float(sigma_out_sigma.real), float(sigma_out_sigma.imag)],
+                    "sigma_out_generic": [float(sigma_out_generic.real), float(sigma_out_generic.imag)],
+                    "delta_sigma_consistent": float(abs(sigma_out_sigma - sigma_in)),
+                    "delta_sigma_generic": float(abs(sigma_out_generic - sigma_in)),
+                },
+            },
+            indent=2,
+        )
+    )
+
+
+def translation_gap_demo(params: Dict[str, Any]) -> None:
+    """Demonstrate the n→2 projection gap after Σ purification."""
+
+    from ..physics.translation_gap import translation_gap
+
+    n = int(params.get("n", 6))
+    seed = params.get("seed", 123)
+    seed = None if seed is None else int(seed)
+    sigma_clean = bool(params.get("sigma_clean", True))
+
+    result, x, p_match, p_mismatch, y_match, y_mismatch = translation_gap(
+        n,
+        seed=seed,
+        sigma_clean=sigma_clean,
+    )
+
+    outdir = _outdir(params, "runs/translation_gap")
+    np.savez(
+        outdir / "gap.npz",
+        x=x,
+        p_match=p_match,
+        p_mismatch=p_mismatch,
+        y_match=y_match,
+        y_mismatch=y_mismatch,
+    )
+    (outdir / "summary.json").write_text(
+        json.dumps(
+            {
+                "n": result.n,
+                "seed": seed,
+                "sigma_clean": sigma_clean,
+                "sigma_in": [float(result.sigma_in.real), float(result.sigma_in.imag)],
+                "sigma_after_purify": [float(result.sigma_after_purify.real), float(result.sigma_after_purify.imag)],
+                "visibility_match": float(result.visibility_match),
+                "loss_match": float(result.loss_match),
+                "visibility_mismatch": float(result.visibility_mismatch),
+                "loss_mismatch": float(result.loss_mismatch),
+            },
+            indent=2,
+        )
+    )

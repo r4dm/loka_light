@@ -163,6 +163,47 @@ PY
 Writes `summary.json` under the chosen `outdir` with the measurement histogram,
 Σ trace by stage and a snapshot of the final state.
 
+## DSP/physics‑toy demos (NumPy)
+
+These scenarios write machine‑readable artefacts (JSON/NPZ) under `runs/` so you
+can inspect Σ traces, witness values, and projection losses without notebooks.
+
+### 9. Pseudo‑Quantum Witness Pack (CHSH/CGLMP + Σ‑noise)
+
+```bash
+python - <<'PY'
+from loka_light.applications.scenarios import pseudo_quantum_witness_pack
+pseudo_quantum_witness_pack({"seed": 123, "epsilon": 0.2})
+PY
+```
+
+Writes `runs/pseudo_quantum_witness_pack/summary.json` with CHSH/CGLMP values and
+Σ‑invariant vs generic noise deltas (same seed/ε).
+
+### 10. Pseudomultipolar Time‑Series Cascade (M→NX)
+
+```bash
+python - <<'PY'
+from loka_light.applications.scenarios import pseudomultipolar_timeseries_demo
+pseudomultipolar_timeseries_demo({"n": 6, "steps": 256, "sections": 3, "tap": 0.5, "seed": 123})
+PY
+```
+
+Writes `runs/pseudomultipolar_timeseries/series.npz` (O1/O2/O3 signals + traces)
+and `summary.json` (mean |Σ| per stage, monotonicity, RX mismatch metrics).
+
+### 11. Translation Gap (n→2 projection)
+
+```bash
+python - <<'PY'
+from loka_light.applications.scenarios import translation_gap_demo
+translation_gap_demo({"n": 6, "seed": 123})
+PY
+```
+
+Writes `runs/translation_gap/gap.npz` and `summary.json` with visibility/loss
+metrics for a matched vs mismatched 2‑pole projection after Σ purification.
+
 ## Cascade Map (M → N/NX → RX)
 
 ```

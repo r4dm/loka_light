@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "loka_light"
-version = "1.2.0"
+version = "1.3.0"
 description = "Compact multipolar toolkit"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -30,6 +30,7 @@ packages = [
   "loka_light.devices",
   "loka_light.physics",
   "loka_light.simulation",
+  "loka_light.simulation.multipolar_pseudo_quantum",
 ]
 
 [tool.setuptools.package-dir]

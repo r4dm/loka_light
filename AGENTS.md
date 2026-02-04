@@ -4,19 +4,29 @@ This is a conceptual orientation for AI agents (not an API manual).
 
 ## Purpose (what to model)
 - N‑polar information flow beyond binary (+/−)
-- Minimal blocks: mind, oscillator, coder, receiver
-- Reproducible demos linking messages → waves
+- Minimal blocks: loka algebra, mind, oscillator, coder, receiver
+- Reproducible demos linking messages → waves → Σ‑cleanup → decode
+- DSP/physics‑toy traces (time-series M→N→NX), plus small “passport” metrics (witnesses)
 
 ## Core (what exists)
 - Multipolarity = distribution over N polarity axes
+- Strict loka factory: `core/factory.py: create_loka()` (name normalization)
+- Table-driven relational lokas: `core/algebras.py: GenericRelationalLoka` (incl. RelHexaSym/RelHeptaTPL3)
 - MultipolarOscillator shapes multi‑conjugate waves
 - PolarCoder maps integers 0…N−1 to basis distributions
-- Wave carries amplitudes + light metadata
+- Wave carries amplitudes + metadata (`physics/multipolar_wave.py: WaveMetadata`, includes `frequency_hz`)
 - PseudoBlockM (devices/pseudomultipolar.py) sums multiple 2‑pole sources into C_n at O1 (relative ground)
 - Sigma tools: `physics/sigma.py` → `p_perp`, `n_stage` (Σ→0), `nx_stage` (multi‑section)
 - SigmaGuard device: `devices/sigma_guard.py` wraps N/NX for cascade O2/O3
 - T‑composition: `physics/composition.py: compose_two_triads_to_c6()` (two triads → 6P)
-- WaveMetadata carries `frequency_hz` for RX compatibility checks
+- Shared-neutral superposition is the default in SuperpositionalLoka/Harloka (avoid accidental “two neutrals”)
+
+## What’s new (reference points)
+- v1.2.x: stricter algebra naming/creation, relational lokas, NX tap sections, consistent Σ conventions (Σ = linear sum), deterministic scenarios.
+- v1.3.x: NumPy-first “validation pack” modules:
+  - Time-series pseudomultipolar cascade: `physics/pseudomultipolar_timeseries.py`
+  - Translation gap (n→2 projection artifact): `physics/translation_gap.py`
+  - Witness pack (CHSH/CGLMP) + Σ-noise: `witnesses.py`, `sigma_noise.py`
 
 ## Operational model (how to think)
 1) Pick N and output mode
@@ -35,7 +45,15 @@ This is a conceptual orientation for AI agents (not an API manual).
 
 - Location: `simulation.multipolar_pseudo_quantum` (CPU/NumPy only).
 - State: reuses `physics.multipolar_wave.MultiConjugateFunction`.
-- Scope: pseudo‑quantum M/N gates, circuits, Σ‑aware metrics and demos; no volumetric geometry.
+- Scalar metric: `MultiConjugateFunction.probability_density()` is defined as Σ|ψ|^k (k = `n_conjugates`).
+- Tensor metric: `MultiConjugateFunction.probability_tensor()` returns ρ = |ψ⟩⟨ψ|.
+- Scope: pseudo‑quantum gates/circuits + witnesses/noise demos; no Torch, no volumetric loka geometry.
+
+## Ready-to-run scenarios (entry points)
+- `applications/scenarios.py: pseudo_mnx_chain` (M→NX→RX, Σ trace)
+- `applications/scenarios.py: pseudomultipolar_timeseries_demo` (DSP-style Σ/energy traces)
+- `applications/scenarios.py: pseudo_quantum_witness_pack` (CHSH/CGLMP + Σ-noise vs generic)
+- `applications/scenarios.py: translation_gap_demo` (n→2 projection loss/visibility)
 
 ## Minimal assumptions
 - Messages in [0, N−1] (strict). No modulo unless explicit.

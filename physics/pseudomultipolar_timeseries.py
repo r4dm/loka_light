@@ -15,11 +15,29 @@ monotonically across sections.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, Sequence
+from typing import List, Sequence
 
 import numpy as np
 
 Array = np.ndarray
+
+
+def _as_linear_coeffs(linear_coeffs: Sequence[float] | None, n: int) -> np.ndarray:
+    if linear_coeffs is None:
+        return np.ones(n, dtype=np.float64)
+    coeffs = np.asarray(list(linear_coeffs), dtype=np.float64)
+    if coeffs.ndim != 1 or coeffs.shape[0] != n:
+        raise ValueError("linear_coeffs must be a length-n 1-D sequence")
+    if not np.any(coeffs):
+        raise ValueError("linear_coeffs must not be all zeros")
+    return coeffs
+
+
+def _as_linear_denom(coeffs: np.ndarray) -> float:
+    denom = float(np.sum(coeffs))
+    if np.isclose(denom, 0.0, atol=1e-15):
+        raise ValueError("linear_coeffs must sum to a non-zero value")
+    return denom
 
 
 def generate_sources(
@@ -71,13 +89,19 @@ def default_profiles(*, sections: int = 3, tap: float = 0.5) -> List[float]:
     return [t] * int(sections)
 
 
-def sigma_trace(signal: Array) -> Array:
-    """Return per-sample |Σ| for a `(steps, n)` signal."""
+def sigma_trace(signal: Array, *, linear_coeffs: Sequence[float] | None = None) -> Array:
+    """Return per-sample |Σ| for a `(steps, n)` signal (optionally weighted).
+
+    Default uses the plain Σ = ∑ aᵢ. When ``linear_coeffs`` is set, Σ is treated
+    as the weighted linear form Σ_c = ∑(cᵢ·aᵢ).
+    """
 
     arr = np.asarray(signal, dtype=np.complex128)
     if arr.ndim != 2:
         raise ValueError("signal must have shape (steps, n)")
-    return np.abs(arr.sum(axis=1)).astype(np.float64)
+    coeffs = _as_linear_coeffs(linear_coeffs, arr.shape[1])
+    residual = np.sum(arr * coeffs[None, :], axis=1)
+    return np.abs(residual).astype(np.float64)
 
 
 def energy_trace(signal: Array) -> Array:
@@ -121,21 +145,29 @@ def _as_taps(sections: int | Sequence[float]) -> List[float]:
     return taps
 
 
-def run_cascade_multi(signal_o1: Array, *, sections: int | Sequence[float]) -> List[Array]:
+def run_cascade_multi(
+    signal_o1: Array,
+    *,
+    sections: int | Sequence[float],
+    linear_coeffs: Sequence[float] | None = None,
+) -> List[Array]:
     """Run NX sections on the time series and return each stage output."""
 
     arr = np.asarray(signal_o1, dtype=np.complex128)
     if arr.ndim != 2:
         raise ValueError("signal_o1 must have shape (steps, n)")
     taps = _as_taps(sections)
-    steps, n = arr.shape
+    _steps, n = arr.shape
     ones = np.ones((1, n), dtype=np.complex128)
+    coeffs = _as_linear_coeffs(linear_coeffs, n)
+    denom = _as_linear_denom(coeffs)
 
     out: List[Array] = []
     current = arr.copy()
     for tap in taps:
-        sigma = current.sum(axis=1, keepdims=True)
-        current = current - (tap / float(n)) * sigma * ones
+        sigma = np.sum(current * coeffs[None, :], axis=1, keepdims=True)
+        phi = sigma / denom
+        current = current - float(tap) * phi * ones
         out.append(current.copy())
     return out
 
@@ -168,13 +200,18 @@ class CascadeTimeseriesResult:
         return all(means[i + 1] <= means[i] + atol for i in range(len(means) - 1))
 
 
-def run_cascade(signal_o1: Array, *, sections: int | Sequence[float] = 1) -> CascadeTimeseriesResult:
+def run_cascade(
+    signal_o1: Array,
+    *,
+    sections: int | Sequence[float] = 1,
+    linear_coeffs: Sequence[float] | None = None,
+) -> CascadeTimeseriesResult:
     """Run the O1 → O2 → O3 cascade and return a compact result."""
 
     taps = tuple(_as_taps(sections))
-    chain = run_cascade_multi(signal_o1, sections=taps)
-    sigma_before = sigma_trace(signal_o1)
-    sigma_chain = tuple(sigma_trace(stage) for stage in chain)
+    chain = run_cascade_multi(signal_o1, sections=taps, linear_coeffs=linear_coeffs)
+    sigma_before = sigma_trace(signal_o1, linear_coeffs=linear_coeffs)
+    sigma_chain = tuple(sigma_trace(stage, linear_coeffs=linear_coeffs) for stage in chain)
     return CascadeTimeseriesResult(
         taps=taps,
         o1=np.asarray(signal_o1, dtype=np.complex128),
@@ -197,4 +234,3 @@ __all__ = [
     "CascadeTimeseriesResult",
     "run_cascade",
 ]
-

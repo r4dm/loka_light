@@ -26,13 +26,17 @@ from ..physics.multipolar_wave import MultiConjugateFunction, WaveMetadata
 from ..cognition.models import NPoleMind
 from ..devices.sigma_guard import SigmaGuard
 from ..devices.pseudomultipolar import BipolarSource, PseudoBlockM
-from ..physics.sigma import sigma_norm
+from ..physics.sigma import sigma_norm, sigma_residual
 
 
 def _outdir(params: Dict[str, Any], default: str) -> Path:
     out = Path(params.get("outdir", default))
     out.mkdir(parents=True, exist_ok=True)
     return out
+
+
+def _complex_dict(z: complex) -> Dict[str, float]:
+    return {"re": float(z.real), "im": float(z.imag)}
 
 
 def object_polarity_scan(params: Dict[str, Any]) -> None:
@@ -179,6 +183,8 @@ def pseudo_mnx_chain(params: Dict[str, Any]) -> None:
     k = int(params.get("k", 3))
     sections = int(params.get("sections", 3))
     bits = [int(x) & 1 for x in params.get("bits", [1, 0, 1])][:k]
+    linear_coeffs_raw = params.get("linear_coeffs")
+    linear_coeffs = None if linear_coeffs_raw is None else [float(x) for x in linear_coeffs_raw]
     while len(bits) < k:
         bits.append(0)
 
@@ -187,10 +193,12 @@ def pseudo_mnx_chain(params: Dict[str, Any]) -> None:
     block_m = PseudoBlockM(n, mapping, name="BlockM")
     mv_mixed = block_m.mix(sources, bits)
 
-    guard = SigmaGuard(sections=sections)
-    sigma_before = sigma_norm(mv_mixed)
+    guard = SigmaGuard(sections=sections, linear_coeffs=linear_coeffs)
+    sigma_before = sigma_norm(mv_mixed, linear_coeffs=linear_coeffs)
+    sigma_before_residual = sigma_residual(mv_mixed, linear_coeffs=linear_coeffs)
     nx_values = guard.apply_nx(mv_mixed, sections=sections)
-    sigma_trace = [sigma_norm(mv) for mv in nx_values]
+    sigma_trace = [sigma_norm(mv, linear_coeffs=linear_coeffs) for mv in nx_values]
+    sigma_residual_trace = [sigma_residual(mv, linear_coeffs=linear_coeffs) for mv in nx_values]
 
     # Build a minimal RX chain and demodulate
     tx_osc = MultipolarOscillator([_default_inductor()], [_default_capacitor()], polarity=n)
@@ -208,8 +216,11 @@ def pseudo_mnx_chain(params: Dict[str, Any]) -> None:
                 "n": n,
                 "k": k,
                 "bits": bits,
+                "linear_coeffs": linear_coeffs,
                 "sigma_before": sigma_before,
+                "sigma_before_residual": _complex_dict(sigma_before_residual),
                 "sigma_trace": sigma_trace,
+                "sigma_residual_trace": [_complex_dict(z) for z in sigma_residual_trace],
                 "decoded": decoded,
                 "block_m_passport": block_m.describe_structure(),
             },
@@ -264,6 +275,8 @@ def pseudomultipolar_timeseries_demo(params: Dict[str, Any]) -> None:
     seed = None if seed is None else int(seed)
     carrier_cycles = float(params.get("carrier_cycles", 0.125))
     noise_std = float(params.get("noise_std", 0.0))
+    linear_coeffs_raw = params.get("linear_coeffs")
+    linear_coeffs = None if linear_coeffs_raw is None else [float(x) for x in linear_coeffs_raw]
 
     taps: List[float]
     if "taps" in params:
@@ -280,14 +293,15 @@ def pseudomultipolar_timeseries_demo(params: Dict[str, Any]) -> None:
         carrier_cycles=carrier_cycles,
         noise_std=noise_std,
     )
-    result = pmts.run_cascade(sources, sections=taps)
+    result = pmts.run_cascade(sources, sections=taps, linear_coeffs=linear_coeffs)
 
     rx_bad_energy = None
     rx_bad_mean_sigma = None
     if n >= 3:
         bad = pmts.project_rank(result.o3, n - 1)
         rx_bad_energy = float(np.mean(pmts.energy_trace(bad)))
-        rx_bad_mean_sigma = float(np.mean(pmts.sigma_trace(bad)))
+        bad_coeffs = None if linear_coeffs is None else linear_coeffs[: n - 1]
+        rx_bad_mean_sigma = float(np.mean(pmts.sigma_trace(bad, linear_coeffs=bad_coeffs)))
 
     outdir = _outdir(params, "runs/pseudomultipolar_timeseries")
     np.savez(
@@ -307,6 +321,7 @@ def pseudomultipolar_timeseries_demo(params: Dict[str, Any]) -> None:
                 "steps": steps,
                 "taps": list(result.taps),
                 "seed": seed,
+                "linear_coeffs": linear_coeffs,
                 "mean_abs_sigma_o1": result.mean_sigma_o1,
                 "mean_abs_sigma_chain": result.mean_sigma_chain,
                 "sigma_monotone": result.is_sigma_monotone(),

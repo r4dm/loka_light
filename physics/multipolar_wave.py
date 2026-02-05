@@ -135,6 +135,26 @@ class MultiConjugateFunction:
         k = int(self.n_conjugates)
         return float(np.sum(np.abs(self.amplitudes) ** k))
 
+    def conjugacy_density(self, power: int | None = None) -> float:
+        """Return the k-conjugacy density Σ|ψ|^k (alias for :meth:`probability_density`).
+
+        When ``power`` is provided, compute Σ|ψ|^power instead of the default
+        ``n_conjugates``.
+        """
+
+        p = self.n_conjugates if power is None else int(power)
+        if p <= 0:
+            raise ValueError("power must be a positive integer")
+        return float(np.sum(np.abs(self.amplitudes) ** p))
+
+    def conjugacy_norm(self, power: int | None = None) -> float:
+        """Return the Lp-norm (Σ|ψ|^p)^(1/p) for the conjugacy metric."""
+
+        p = self.n_conjugates if power is None else int(power)
+        if p <= 0:
+            raise ValueError("power must be a positive integer")
+        return self.conjugacy_density(power=p) ** (1.0 / float(p))
+
     def collapse(self, *, recursive: bool = True) -> complex:
         """Collapse the wave to a number using the underlying MultipolarValue."""
 

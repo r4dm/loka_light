@@ -29,6 +29,22 @@ def test_timeseries_nx_taps_decrease_mean_sigma_monotonically() -> None:
     assert np.isclose(means[1], 0.25 * result.mean_sigma_o1, atol=1e-12)
 
 
+def test_timeseries_linear_coeffs_drive_weighted_sigma_to_zero() -> None:
+    sources = generate_sources(6, steps=128, seed=0)
+    coeffs = [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    result = run_cascade(sources, sections=1, linear_coeffs=coeffs)
+    assert result.mean_sigma_chain[0] < 1e-10
+
+
+def test_timeseries_linear_coeffs_taps_scale_mean_sigma() -> None:
+    sources = generate_sources(6, steps=128, seed=0)
+    coeffs = [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    result = run_cascade(sources, sections=[0.5, 0.5], linear_coeffs=coeffs)
+    means = result.mean_sigma_chain
+    assert np.isclose(means[0], 0.5 * result.mean_sigma_o1, atol=1e-12)
+    assert np.isclose(means[1], 0.25 * result.mean_sigma_o1, atol=1e-12)
+
+
 def test_good_vs_bad_rx_is_distinguishable_by_energy() -> None:
     n = 6
     steps = 64
@@ -45,4 +61,3 @@ def test_good_vs_bad_rx_is_distinguishable_by_energy() -> None:
     assert bad_energy < good_energy
     assert np.isclose(good_energy, float(n), atol=1e-12)
     assert np.isclose(bad_energy, float(n - 1), atol=1e-12)
-

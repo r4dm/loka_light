@@ -6,7 +6,7 @@ from loka_light.devices.communication import MultipolarTransmitter
 from loka_light.devices.components import MultiPlateCapacitor, NBranchInductor
 from loka_light.devices.sources import MultipolarOscillator
 from loka_light.physics.multipolar_wave import MultiConjugateFunction, WaveMetadata
-from loka_light.physics.sigma import nx_stage, sigma_norm
+from loka_light.physics.sigma import n_stage, nx_stage, sigma_norm, sigma_residual
 from loka_light.simulation.multipolar_pseudo_quantum.gates import measure_polarity
 
 
@@ -50,6 +50,37 @@ def test_nx_stage_taps_decrease_sigma_monotonically() -> None:
     assert residuals[1] < residuals[0]
     assert np.isclose(residuals[0], 0.5)
     assert np.isclose(residuals[1], 0.25)
+
+
+def test_linear_form_n_stage_enforces_weighted_sigma() -> None:
+    loka = LokaCn(3, operation_type="add", loka_name="C3", polarity_names=["A", "B", "C"])
+    mv = MultipolarValue(loka, {loka.polarities[0]: 1.0})
+    coeffs = [2.0, 1.0, 1.0]
+
+    cleaned = n_stage(mv, linear_coeffs=coeffs)
+    assert sigma_norm(cleaned, linear_coeffs=coeffs) < 1e-12
+    assert abs(sigma_residual(cleaned, linear_coeffs=coeffs)) < 1e-12
+
+
+def test_linear_form_nx_stage_reduces_residual_by_tap_factor() -> None:
+    loka = LokaCn(3, operation_type="add", loka_name="C3", polarity_names=["A", "B", "C"])
+    mv = MultipolarValue(loka, {loka.polarities[0]: 1.0})
+    coeffs = [2.0, 1.0, 1.0]
+
+    base = sigma_norm(mv, linear_coeffs=coeffs)
+    outs = nx_stage(mv, sections=[0.5, 0.5], linear_coeffs=coeffs)
+    residuals = [sigma_norm(out, linear_coeffs=coeffs) for out in outs]
+
+    assert np.isclose(base, 2.0)
+    assert np.isclose(residuals[0], 1.0)
+    assert np.isclose(residuals[1], 0.5)
+
+
+def test_conjugacy_aliases_match_probability_density() -> None:
+    psi = MultiConjugateFunction(np.array([1.0 + 0.0j, 1.0 + 0.0j]), n_conjugates=4)
+    assert np.isclose(psi.conjugacy_density(), psi.probability_density())
+    assert np.isclose(psi.conjugacy_norm(), psi.probability_density() ** (1.0 / 4.0))
+    assert np.isclose(psi.conjugacy_density(power=2), float(np.sum(np.abs(psi.amplitudes) ** 2)))
 
 
 def test_transmitter_modulates_oscillator_carrier() -> None:

@@ -6,9 +6,9 @@
 ## Conceptual intro
 
 - Multipolarity: signals are distributions over **N poles** instead of binary (+/−); `LokaCn` and `MultipolarValue` keep the algebra and Σ‑balance.
-- Pseudomultipolar cascades: Σ is controlled by M/N/NX stages (`physics.sigma`, `devices.sigma_guard.SigmaGuard`) so that a common component is removed before decoding.
+- Pseudomultipolar cascades: Σ (or a weighted linear form Σ_c = ∑(cᵢ·aᵢ)) is controlled by M/N/NX stages (`physics.sigma`, `devices.sigma_guard.SigmaGuard`) so that a common component is removed before decoding.
 - Volumetric path (lightweight): `MultipolarOscillator` → TX/RX antennas → receiver form a simple medium/communication chain; `geometry_profile` is a label, not a full 3D field model.
-- Pseudo‑quantum layer: CPU/NumPy states via `MultiConjugateFunction` with scalar `probability_density()` (= Σ|ψ|^k, k=`n_conjugates`) and tensor `probability_tensor()` for simple “quantum‑like” experiments.
+- Pseudo‑quantum layer: CPU/NumPy states via `MultiConjugateFunction` with scalar `probability_density()` (= Σ|ψ|^k, k=`n_conjugates`, aliases: `conjugacy_density()`/`conjugacy_norm()`) and tensor `probability_tensor()` for simple “quantum‑like” experiments.
 
 ### Minimal code examples
 
@@ -41,6 +41,8 @@ mv_clean = guard.apply(mv)
 print("residual before:", guard.residual(mv))
 print("residual after:", guard.residual(mv_clean))
 ```
+
+Advanced: pass `linear_coeffs=[...]` to enforce a weighted linear law ∑(cᵢ·aᵢ)→0 instead of plain Σ.
 
 **3. Simple pseudo‑quantum state with tensor metric**
 
@@ -143,8 +145,9 @@ pseudo_mnx_chain({"n": 6, "k": 3, "sections": 3, "bits": [1,0,1]})
 PY
 ```
 
-Writes `runs/pseudo_mnx_chain/trace.json` with the |Σ| values after each NX section
-and the decoded index after Σ purification.
+Writes `runs/pseudo_mnx_chain/trace.json` with the |Σ| values and complex Σ residual (re/im)
+after each NX section, plus the decoded index after Σ purification. Set `"linear_coeffs": [...]`
+to trace/clean a weighted linear form Σ_c = ∑(cᵢ·aᵢ).
 
 ### 8. Pseudo‑Quantum H→Phase→H→Measure
 
@@ -191,6 +194,7 @@ PY
 
 Writes `runs/pseudomultipolar_timeseries/series.npz` (O1/O2/O3 signals + traces)
 and `summary.json` (mean |Σ| per stage, monotonicity, RX mismatch metrics).
+Set `"linear_coeffs": [...]` to measure/clean a weighted linear form Σ_c = ∑(cᵢ·aᵢ).
 
 ### 11. Translation Gap (n→2 projection)
 
@@ -221,7 +225,7 @@ metrics for a matched vs mismatched 2‑pole projection after Σ purification.
 
 Relevant APIs
 - M‑stage: `devices.pseudomultipolar.PseudoBlockM`, `devices.pseudomultipolar.BipolarSource`.
-- Σ‑stage: `physics.sigma` (P⊥/N/NX), `devices.sigma_guard.SigmaGuard`.
+- Σ‑stage: `physics.sigma` (P⊥/N/NX, `sigma_residual`, `linear_coeffs`), `devices.sigma_guard.SigmaGuard`.
 - Volumetric: `devices.sources.MultipolarOscillator` (with `geometry_profile` label),
   `devices.communication.MultipolarAntenna` (gain/loss), `devices.detectors.MultipolarReceiver`.
 

@@ -1,9 +1,5 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17734819.svg)](https://doi.org/10.5281/zenodo.17734819)
 
-<p align="center">
-  <video src="loka_ytp.mp4" controls muted loop width="640"></video>
-</p>
-
 # Loka Light
 
 ## Conceptual intro

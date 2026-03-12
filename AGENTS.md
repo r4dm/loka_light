@@ -73,3 +73,8 @@ This is a conceptual orientation for AI agents (not an API manual).
 - Minimal phenomenology; not a full EM simulator
 - Default decode is argmax; advanced decoding is out‑of‑scope
 - Theory lives in docstrings; no external PDFs are needed here
+
+## Core Anti-Patterns (Theory Drift)
+If you see these in code or proposals, they must be rejected:
+- **Algebraic Drift:** Using continuous $U(1)$ phases ($e^{i\theta}$) instead of discrete roots $C_n$. Using scalar probability $|\psi|^2$ for N>2 instead of probability tensor. Mixing addition and multiplication without using distinct `add_loka`/`mult_loka` algebra structures. Using classic $z \to \bar{z}$ instead of k-conjugates for N>2.
+- **Physics Drift:** Building higher-order lokas directly without passing through the M/N cascade (formation $\to$ removal). Calculating quantum metrics (CGLMP/Fidelity) *before* the removal stage (working with a "dirty" superposition mixture). Receivers checking *only* frequency but ignoring polarity/pole count matching.

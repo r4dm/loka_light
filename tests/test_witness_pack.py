@@ -1,6 +1,9 @@
+import json
+
 import numpy as np
 
 from loka_light import sigma_noise, witnesses
+from loka_light.applications.scenarios import pseudo_quantum_witness_pack
 
 
 def test_chsh_is_2sqrt2_for_reference_measurements() -> None:
@@ -33,3 +36,33 @@ def test_sigma_consistent_unitary_preserves_sigma_better_than_generic() -> None:
     assert delta_sigma < 1e-10
     assert delta_sigma < delta_generic
     assert delta_generic > 1e-3
+
+
+def test_probability_tensor_is_hermitian_rank_one_outer_product() -> None:
+    from loka_light.physics.multipolar_wave import MultiConjugateFunction
+
+    psi = np.array([1.0 + 0.0j, 0.5j, -0.3 + 0.1j], dtype=np.complex128)
+    wave = MultiConjugateFunction(psi, n_conjugates=3)
+    rho = wave.probability_tensor()
+
+    assert np.allclose(rho, np.outer(psi, np.conj(psi)))
+    assert np.allclose(rho, rho.conj().T, atol=1e-12)
+    eigvals = np.linalg.eigvalsh(rho)
+    assert np.count_nonzero(eigvals > 1e-10) == 1
+    assert np.all(eigvals >= -1e-10)
+
+
+def test_pseudo_quantum_witness_pack_records_clean_state_before_noise(tmp_path) -> None:
+    outdir = tmp_path / "witness_pack"
+    pseudo_quantum_witness_pack({"outdir": str(outdir), "seed": 0, "noise_dim": 9, "d_values": [2, 3, 4]})
+
+    summary = json.loads((outdir / "summary.json").read_text())
+    sigma_noise_summary = summary["sigma_noise"]
+
+    sigma_after_clean = complex(*sigma_noise_summary["sigma_after_clean"])
+    sigma_out_sigma = complex(*sigma_noise_summary["sigma_out_sigma_consistent"])
+
+    assert sigma_noise_summary["clean_state"] is True
+    assert abs(sigma_after_clean) < 1e-10
+    assert abs(sigma_out_sigma) < 1e-10
+    assert sigma_noise_summary["delta_sigma_consistent"] < sigma_noise_summary["delta_sigma_generic"]

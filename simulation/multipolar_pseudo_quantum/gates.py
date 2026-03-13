@@ -3,15 +3,16 @@
 The module stays strictly in the pseudo‑multipolar cascade domain:
 
 - states are represented by :class:`loka_light.physics.multipolar_wave.MultiConjugateFunction`;
-- gates are linear operations on amplitudes (phases, unitary‑like matrices);
+- gates are linear operations on the waveform representation (phase shifts,
+  unitary-like matrices);
 - the M‑stage builds controlled superpositions of several states;
 - the N‑stage applies a projection/removal with Σ monitoring (Σ→0);
 - measurement interprets ``|ψ|^k`` over poles as a probability distribution,
   where ``k = state.n_conjugates``.
 
-Σ is defined here as the sum of complex amplitudes over all poles; before and
-after N‑operations ``sigma_value`` and ``sigma_residual`` expose Σ traces for
-tests and diagnostics.
+Σ is defined here as the linear sum across poles and is computed with complex
+arithmetic only as a CPU-level representation. Before and after N‑operations
+``sigma_value`` and ``sigma_residual`` expose Σ traces for tests and diagnostics.
 """
 
 from __future__ import annotations
@@ -61,11 +62,11 @@ def ensure_sigma_constraint(before: complex, after: complex, tol: float = 1e-8) 
 
 
 def apply_phase(state: MultiConjugateFunction, phase: float | Sequence[float]) -> MultiConjugateFunction:
-    """Apply a phase shift to the state amplitudes.
+    """Apply a reference-layer phase shift to the waveform amplitudes.
 
     - If ``phase`` is a scalar, the same shift is applied to all poles.
     - If ``phase`` is a vector, its shape must match the state dimension and
-      phases are applied component‑wise.
+      shifts are applied component‑wise.
     """
 
     amplitudes = state.amplitudes
@@ -110,7 +111,8 @@ def m_superpose(states: Sequence[MultiConjugateFunction], weights: Sequence[comp
         Complex weights for the linear combination. If ``None``, uniform
         weights are used.
     normalize:
-        If ``True``, the resulting state is L2‑normalized.
+        If ``True``, the resulting state is normalized with the active
+        k-conjugacy metric from :meth:`MultiConjugateFunction.normalize`.
     """
 
     states = list(states)

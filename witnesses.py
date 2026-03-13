@@ -1,13 +1,15 @@
 """Reference CHSH/CGLMP witnesses (NumPy only).
 
 This module implements a compact "passport of correctness" for the physics-toy
-user: numbers that can be independently verified without Torch.
+user: numbers that can be independently verified without Torch. The formulas
+below are reference projections for the pseudo-quantum validation layer, not a
+replacement for the discrete loka algebra itself.
 
 Conventions
 -----------
 - State: the maximally entangled qudit pair |Φ_d> = (1/√d) Σ_i |i,i>.
 - Measurements: two settings per party with d outcomes each, built from Fourier
-  bases with standard phase shifts (Collins et al., 2002):
+    bases with standard phase parametrisation (Collins et al., 2002):
     Alice: α = (0, 1/2)
     Bob:   β = (1/4, -1/4)
 - Output: CGLMP value I_d (for d=2 equals CHSH ≈ 2.828).

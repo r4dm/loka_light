@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 
 from loka_light.physics.pseudomultipolar_timeseries import (
@@ -11,6 +12,13 @@ from loka_light.physics.pseudomultipolar_timeseries import (
 
 def test_timeseries_n_stage_drives_mean_sigma_to_zero() -> None:
     sources = generate_sources(6, steps=128, seed=0)
+    result = run_cascade(sources, sections=1)
+    assert result.mean_sigma_chain[0] < 1e-10
+
+
+@pytest.mark.parametrize("n", [3, 5, 7])
+def test_timeseries_n_stage_drives_mean_sigma_to_zero_for_odd_n(n: int) -> None:
+    sources = generate_sources(n, steps=128, seed=0)
     result = run_cascade(sources, sections=1)
     assert result.mean_sigma_chain[0] < 1e-10
 

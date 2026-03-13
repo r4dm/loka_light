@@ -130,20 +130,44 @@ class MultipolarAntenna:
     - role: informational label ("tx" or "rx").
     - gain: linear gain multiplier (applied after losses).
     - loss_db: additional attenuation in dB (applied symmetrically on emit/receive).
+    - strict_polarity: reject waves whose pole count does not match the tuning.
     """
 
-    def __init__(self, *, polarity: int, role: str = "tx", gain: float = 1.0, loss_db: float = 0.0) -> None:
+    def __init__(
+        self,
+        *,
+        polarity: int,
+        role: str = "tx",
+        gain: float = 1.0,
+        loss_db: float = 0.0,
+        strict_polarity: bool = True,
+    ) -> None:
         self.polarity = int(polarity)
         self.role = role
         self.gain = float(gain)
         self.loss_db = float(loss_db)
+        self.strict_polarity = bool(strict_polarity)
 
     def _scale(self) -> float:
         # Convert dB loss to linear and apply gain
         loss_lin = 10.0 ** (-self.loss_db / 20.0) if self.loss_db != 0.0 else 1.0
         return self.gain * loss_lin
 
+    def is_compatible(self, wave: MultiConjugateFunction) -> bool:
+        if wave.n_conjugates != self.polarity:
+            return False
+        if wave.metadata is None:
+            return True
+        return len(wave.metadata.polarity_names) == self.polarity
+
+    def _validate_wave(self, wave: MultiConjugateFunction) -> None:
+        if self.strict_polarity and not self.is_compatible(wave):
+            raise ValueError(
+                f"antenna tuned for {self.polarity} poles cannot handle wave with {wave.n_conjugates} poles"
+            )
+
     def emit(self, wave: MultiConjugateFunction) -> MultiConjugateFunction:
+        self._validate_wave(wave)
         scaled = wave.copy()
         scaled.amplitudes = scaled.amplitudes * self._scale()
         if scaled.metadata is not None:
@@ -156,6 +180,7 @@ class MultipolarAntenna:
         return scaled
 
     def receive(self, wave: MultiConjugateFunction) -> MultiConjugateFunction:
+        self._validate_wave(wave)
         scaled = wave.copy()
         scaled.amplitudes = scaled.amplitudes * self._scale()
         if scaled.metadata is not None:

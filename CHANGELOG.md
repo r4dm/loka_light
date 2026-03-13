@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1 — 2026-03-13
+
+- Hardened antenna and receiver compatibility checks: pole-count validation, loka/polarity metadata matching, and keyed frequency gating now live directly in the device pipeline.
+- Integrated `SigmaGuard` into receiver-side purification flows and aligned `secure_transmission` / `property_transfer_chain` with the explicit O2 cleanup path.
+- Expanded theory-facing coverage for odd-N cascades, translation-gap branches, `probability_tensor()`, and clean-state witness/noise validation.
+- Reworded tetradic/pseudo-quantum helper metadata so complex arithmetic, phase operators, and direct composition are clearly marked as projection/reference vocabulary rather than primary multipolar law.
+
 ## 1.4.0 — 2026-02-05
 
 - Added weighted linear Σ (Σ_c = ∑(cᵢ·aᵢ)) support via `linear_coeffs` in `physics/sigma.py` and `physics/pseudomultipolar_timeseries.py`.

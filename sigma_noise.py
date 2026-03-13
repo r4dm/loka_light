@@ -1,12 +1,13 @@
 """Σ-consistent vs generic unitary noise (NumPy only).
 
 The noise operators here are intended for the pseudo-multipolar / pseudo-quantum
-CPU layer, where Σ is tracked as the *linear* sum of complex amplitudes.
+CPU layer, where Σ is tracked as a linear sum across poles. Complex arithmetic
+is used here as a computational representation, not as the fundamental loka law.
 
 Two constructors are provided:
 - `unitary_sigma_consistent`: generates a unitary U that preserves Σ exactly
   (Σ(Uψ) == Σ(ψ)).
-- `unitary_generic`: a baseline random unitary exp(i ε H) without Σ constraint.
+- `unitary_generic`: a reference random unitary baseline without Σ constraint.
 """
 
 from __future__ import annotations
@@ -68,7 +69,7 @@ def unitary_generic(
     rng: np.random.Generator | None = None,
     epsilon: float = 0.2,
 ) -> Array:
-    """Baseline random unitary noise exp(i ε H) for a random Hermitian H."""
+    """Reference random unitary baseline built from a Hermitian generator."""
 
     if n < 2:
         raise ValueError("n must be ≥ 2")

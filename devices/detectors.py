@@ -18,8 +18,9 @@ from ..core.loka import Loka
 from .media import MediaPhantom
 from .passport import CascadeStage, StructuralPassport
 from .sources import MultipolarOscillator
+from .sigma_guard import SigmaGuard
 from ..cognition.base import AbstractMind
-from ..physics.multipolar_wave import MultiConjugateFunction
+from ..physics.multipolar_wave import MultiConjugateFunction, WaveMetadata
 
 
 class MultipolarMicrophone:
@@ -121,6 +122,7 @@ class MultipolarReceiver(MindLinkedDevice):
         oscillator: MultipolarOscillator,
         *,
         key: DynamicKey | None = None,
+        sigma_guard: SigmaGuard | None = None,
         name: str | None = None,
         mind: AbstractMind | None = None,
         loka: Loka | str | None = None,
@@ -130,6 +132,7 @@ class MultipolarReceiver(MindLinkedDevice):
         super().__init__(mind=mind, loka=loka, default_rank=desired_rank)
         self.oscillator = oscillator
         self.key = key
+        self.sigma_guard = sigma_guard
         self.name = name or "MultipolarReceiver"
         if self.oscillator.get_polarity() != self.rank:
             self.oscillator.set_polarity(self.rank)
@@ -157,6 +160,8 @@ class MultipolarReceiver(MindLinkedDevice):
         notes = ["Receiver mirrors the transmitter's Sigma guard to close the cascade."]
         if self.key is not None:
             notes.append("Dynamic key retunes polarity and frequency before each capture.")
+        if self.sigma_guard is not None:
+            notes.append("SigmaGuard purification is active before decoding.")
         return StructuralPassport(
             device_name=self.name,
             cascade=cascade,
@@ -182,43 +187,103 @@ class MultipolarReceiver(MindLinkedDevice):
         self._coder = PolarCoder(self._n_polarities, loka=self.loka)
         self._sync_passport()
 
-    def is_compatible(self, wave: MultiConjugateFunction, *, tol_poles: int = 0, tol_freq: float | None = None) -> bool:
+    def _expected_loka_names(self) -> set[str]:
+        return {self.loka.name, self.oscillator.loka.name}
+
+    def _expected_polarity_names(self) -> list[str]:
+        return [p.name for p in self.loka.polarities]
+
+    def _metadata_is_compatible(self, wave: MultiConjugateFunction) -> bool:
+        meta = wave.metadata
+        if meta is None:
+            return True
+        if meta.loka_name not in self._expected_loka_names():
+            return False
+        if len(meta.polarity_names) != self.rank:
+            return False
+        return list(meta.polarity_names) == self._expected_polarity_names()
+
+    def _purify_wave(self, wave: MultiConjugateFunction) -> MultiConjugateFunction:
+        if self.sigma_guard is None:
+            return wave.copy()
+        mv = wave.to_multipolar_value(self.loka)
+        purified = self.sigma_guard.apply_nx(mv, sections=self.sigma_guard.sections)[-1]
+        amplitudes = np.asarray(
+            [purified.coefficients.get(p, 0.0) for p in purified.loka.polarities],
+            dtype=np.complex128,
+        )
+        frequency_hz = self.oscillator.working_frequency
+        if wave.metadata is not None and wave.metadata.frequency_hz is not None:
+            frequency_hz = wave.metadata.frequency_hz
+        metadata = WaveMetadata.from_amplitudes(
+            amplitudes,
+            loka_name=purified.loka.name,
+            polarity_names=[p.name for p in purified.loka.polarities],
+            frequency_hz=frequency_hz,
+        )
+        return MultiConjugateFunction(amplitudes, n_conjugates=self.rank, metadata=metadata)
+
+    def is_compatible(
+        self,
+        wave: MultiConjugateFunction,
+        *,
+        tol_poles: int = 0,
+        tol_freq: float | None = None,
+        require_frequency: bool = False,
+    ) -> bool:
         poles_ok = abs(wave.n_conjugates - self.rank) <= tol_poles
         if not poles_ok:
             return False
+        if not self._metadata_is_compatible(wave):
+            return False
         # Frequency check: only compare against explicit frequency metadata if requested
-        if tol_freq is None or wave.metadata is None:
+        if tol_freq is None:
             return poles_ok
+        if wave.metadata is None:
+            return False if require_frequency else poles_ok
         freq_meta = wave.metadata.frequency_hz
         if freq_meta is None:
-            return poles_ok
+            return False if require_frequency else poles_ok
         return abs(freq_meta - self.oscillator.working_frequency) <= tol_freq
 
-    def receive(self, wave: MultiConjugateFunction) -> bool:
+    def receive(self, wave: MultiConjugateFunction, *, purify: bool | None = None) -> bool:
         if self.key is not None:
             n_pol, freq = self.key.next()
             self.set_polarity(n_pol)
             self.oscillator.set_frequency(freq)
             self.structural_passport.record_metric("configured_polarity", float(self.rank))
-        tol_freq = 1.0 if self.key is None else None
-        if not self.is_compatible(wave, tol_freq=tol_freq):
+            self.structural_passport.record_metric("working_frequency_hz", self.oscillator.working_frequency)
+        tol_freq = 1.0
+        if not self.is_compatible(wave, tol_freq=tol_freq, require_frequency=self.key is not None):
             return False
-        self._last_wave = wave
+        should_purify = self.sigma_guard is not None if purify is None else bool(purify)
+        self._last_wave = self._purify_wave(wave) if should_purify else wave.copy()
+        if self._last_wave.metadata is not None:
+            self.structural_passport.record_metric("last_sigma_norm", self._last_wave.metadata.sigma_norm)
         return True
+
+    def receive_and_purify(self, wave: MultiConjugateFunction) -> bool:
+        return self.receive(wave, purify=True)
 
     def last_wave(self) -> Optional[MultiConjugateFunction]:
         return self._last_wave
 
-    def demodulate(self, wave: Optional[MultiConjugateFunction] = None) -> List[int]:
+    def demodulate(self, wave: Optional[MultiConjugateFunction] = None, *, purify: bool | None = None) -> List[int]:
         target = wave or self._last_wave
         if target is None:
             return []
+        should_purify = self.sigma_guard is not None if purify is None else bool(purify)
+        if should_purify:
+            target = self._purify_wave(target)
         amps = target.amplitudes
         if amps.size == 0:
             return []
         idx = int(np.argmax(np.abs(amps)))
         self.structural_passport.record_metric("last_demodulated", float(idx))
         return [idx]
+
+    def demodulate_clean(self, wave: Optional[MultiConjugateFunction] = None) -> List[int]:
+        return self.demodulate(wave, purify=True)
 
     def describe_structure(self) -> dict:
         self._sync_passport()

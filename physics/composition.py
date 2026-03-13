@@ -8,6 +8,8 @@ conjugate/complimentary in device logic.
 Note: this is a *direct-sum style* wiring (no shared neutral between layers).
 For superposition spaces that require a common neutral, keep
 ``require_shared_neutral=True`` when constructing :class:`SuperpositionalLoka`.
+This helper is algebra-only wiring and is not a substitute for the physical
+formation/removal cascade used in M/N device flows.
 """
 
 from __future__ import annotations

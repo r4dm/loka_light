@@ -583,11 +583,11 @@ class LokaCn(Loka):
             1: "unit_conserve",
             2: "binary_linear",
             3: "triadic_superposition",
-            4: "complex_wave",
+            4: "tetradic_projection",
             5: "quaternion_harloka",
             6: "relational_visibility",
             7: "relational_visibility",
-            8: "complex_wave",
+            8: "tetradic_projection",
             9: "quaternion_harloka",
             10: "relational_visibility",
         }

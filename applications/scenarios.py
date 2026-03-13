@@ -58,15 +58,16 @@ def object_polarity_scan(params: Dict[str, Any]) -> None:
 def secure_transmission(params: Dict[str, Any]) -> None:
     key = DynamicKey(polarities=[3, 4, 5, 6], freqs_hz=[110.0, 130.0, 150.0, 170.0])
     tx = MultipolarTransmitter(MultipolarOscillator([_default_inductor()], [_default_capacitor()]), key=key)
+    guard = SigmaGuard(sections=2)
     rx = MultipolarReceiver(
         MultipolarOscillator([_default_inductor()], [_default_capacitor()]),
         key=DynamicKey(polarities=[3, 4, 5, 6], freqs_hz=[110.0, 130.0, 150.0, 170.0]),
+        sigma_guard=guard,
     )
     tx_antennas: Dict[int, MultipolarAntenna] = {}
     rx_antennas: Dict[int, MultipolarAntenna] = {}
     messages = list(params.get("messages", [1, 0, 2, 3, 1, 3]))
     good: List[int] = []
-    guard = SigmaGuard(sections=2)
     for msg in messages:
         wave = tx.transmit([msg])
         n = wave.n_conjugates
@@ -75,24 +76,7 @@ def secure_transmission(params: Dict[str, Any]) -> None:
         emitted = tx_ant.emit(wave)
         received = rx_ant.receive(emitted)
         if rx.receive(received):
-            # Apply SigmaGuard (NX) before decoding to enforce Σ→0
-            mv = received.to_multipolar_value(rx.loka)
-            purified = guard.apply_nx(mv, sections=guard.sections)[-1]
-            purified_vec = np.asarray(
-                [purified.coefficients.get(p, 0.0) for p in purified.loka.polarities],
-                dtype=np.complex128,
-            )
-            purified_wave = MultiConjugateFunction(
-                purified,
-                n_conjugates=received.n_conjugates,
-                metadata=WaveMetadata.from_amplitudes(
-                    purified_vec,
-                    loka_name=purified.loka.name,
-                    polarity_names=[p.name for p in purified.loka.polarities],
-                    frequency_hz=(received.metadata.frequency_hz if received.metadata else None),
-                ),
-            )
-            good.extend(rx.demodulate(purified_wave))
+            good.extend(rx.demodulate())
     outdir = _outdir(params, "runs/secure_transmission")
     (outdir / "result.json").write_text(json.dumps({"sent": messages, "received": good}, indent=2))
 
@@ -123,12 +107,16 @@ def property_transfer_chain(params: Dict[str, Any]) -> None:
     tx_osc = MultipolarOscillator([_default_inductor()], [_default_capacitor()], mind=mind)
     rx_osc = MultipolarOscillator([_default_inductor()], [_default_capacitor()], mind=mind)
     tx = MultipolarTransmitter(tx_osc, mind=mind)
-    rx = MultipolarReceiver(rx_osc, mind=mind)
+    rx = MultipolarReceiver(rx_osc, mind=mind, sigma_guard=SigmaGuard())
+    tx_ant = MultipolarAntenna(polarity=tx.rank, role="tx")
+    rx_ant = MultipolarAntenna(polarity=rx.rank, role="rx")
     decoded: List[int] = []
     for msg in messages:
         wave = tx.transmit([msg])
-        rx.receive(wave)
-        decoded.extend(rx.demodulate())
+        emitted = tx_ant.emit(wave)
+        received = rx_ant.receive(emitted)
+        if rx.receive(received):
+            decoded.extend(rx.demodulate())
     outdir = _outdir(params, "runs/property_transfer")
     (outdir / "messages.json").write_text(json.dumps({"sent": messages, "decoded": decoded}, indent=2))
 
@@ -359,6 +347,15 @@ def pseudo_quantum_witness_pack(params: Dict[str, Any]) -> None:
     else:
         psi = psi / norm
     sigma_in = complex(psi.sum())
+    psi = psi - (sigma_in / float(dim))
+    clean_norm = float(np.linalg.norm(psi))
+    if clean_norm == 0.0:
+        psi = (np.ones(dim, dtype=np.complex128) + 0.0j) / np.sqrt(dim)
+        psi = psi - complex(psi.sum()) / float(dim)
+        clean_norm = float(np.linalg.norm(psi))
+    psi = psi / clean_norm
+    sigma_after_clean = complex(psi.sum())
+    clean_state = bool(abs(sigma_after_clean) < 1e-10)
 
     rng_consistent = np.random.default_rng(None if seed is None else seed + 1)
     rng_generic = np.random.default_rng(None if seed is None else seed + 2)
@@ -380,10 +377,12 @@ def pseudo_quantum_witness_pack(params: Dict[str, Any]) -> None:
                 "sigma_noise": {
                     "dim": dim,
                     "sigma_in": [float(sigma_in.real), float(sigma_in.imag)],
+                    "sigma_after_clean": [float(sigma_after_clean.real), float(sigma_after_clean.imag)],
+                    "clean_state": clean_state,
                     "sigma_out_sigma_consistent": [float(sigma_out_sigma.real), float(sigma_out_sigma.imag)],
                     "sigma_out_generic": [float(sigma_out_generic.real), float(sigma_out_generic.imag)],
-                    "delta_sigma_consistent": float(abs(sigma_out_sigma - sigma_in)),
-                    "delta_sigma_generic": float(abs(sigma_out_generic - sigma_in)),
+                    "delta_sigma_consistent": float(abs(sigma_out_sigma - sigma_after_clean)),
+                    "delta_sigma_generic": float(abs(sigma_out_generic - sigma_after_clean)),
                 },
             },
             indent=2,
